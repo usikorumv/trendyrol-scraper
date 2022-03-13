@@ -1,0 +1,421 @@
+{
+  "attributes": [{
+    "key": {
+      "name": "Boy / \u00d6l\u00e7\u00fc",
+      "id": 2
+    },
+    "value": {
+      "name": "Regular",
+      "id": 142263
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Desen",
+      "id": 33
+    },
+    "value": {
+      "name": "D\u00fcz",
+      "id": 261977
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Bel",
+      "id": 1
+    },
+    "value": {
+      "name": "Y\u00fcksek Bel",
+      "id": 4
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Kuma\u015f Tipi",
+      "id": 200
+    },
+    "value": {
+      "name": "\u00d6rme",
+      "id": 2191
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Stil",
+      "id": 250
+    },
+    "value": {
+      "name": "Casual",
+      "id": 2429
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Materyal",
+      "id": 14
+    },
+    "value": {
+      "name": "Polyester",
+      "id": 99
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Renk",
+      "id": 348
+    },
+    "value": {
+      "name": "Siyah",
+      "id": 14
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Cep",
+      "id": 101
+    },
+    "value": {
+      "name": "Cepsiz",
+      "id": 1608
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Pa\u00e7a Tipi",
+      "id": 17
+    },
+    "value": {
+      "name": "Boru Pa\u00e7a",
+      "id": 120
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Kuma\u015f/\u0130plik \u00d6zellik",
+      "id": 634
+    },
+    "value": {
+      "name": "\u0130nterlok",
+      "id": 196090
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "\u00dcr\u00fcn Detay\u0131",
+      "id": 635
+    },
+    "value": {
+      "name": "Y\u0131rtma\u00e7l\u0131",
+      "id": 197190
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "\u00dcr\u00fcn Tipi",
+      "id": 342
+    },
+    "value": {
+      "name": "D\u00fcz",
+      "id": 175939
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Boy",
+      "id": 48
+    },
+    "value": {
+      "name": "Regular",
+      "id": 902439
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Siluet",
+      "id": 880
+    },
+    "value": {
+      "name": "Skinny",
+      "id": 998334
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Ortam",
+      "id": 881
+    },
+    "value": {
+      "name": "Casual&Comfort",
+      "id": 998410
+    },
+    "starred": false
+  }, {
+    "key": {
+      "name": "Kal\u0131p",
+      "id": 179
+    },
+    "value": {
+      "name": "Skinny",
+      "id": 2016
+    },
+    "starred": false
+  }],
+  "alternativeVariants": [],
+  "variants": [{
+    "attributeId": 338,
+    "attributeName": "Beden",
+    "attributeType": "Size",
+    "attributeValue": "S",
+    "stamps": [],
+    "price": {
+      "profitMargin": 0,
+      "discountedPrice": {
+        "text": "159,99 TL",
+        "value": 159.99
+      },
+      "sellingPrice": {
+        "text": "159,99 TL",
+        "value": 159.99
+      },
+      "originalPrice": {
+        "text": "159,99 TL",
+        "value": 159.99
+      },
+      "currency": "TRY"
+    },
+    "fulfilmentType": "st",
+    "attributeBeautifiedValue": "s",
+    "isWinner": true,
+    "listingId": "1bb1b74259963da32afbca0cee325824",
+    "stock": null,
+    "sellable": true,
+    "availableForClaim": true,
+    "barcode": "8682581465342",
+    "itemNumber": 91180582,
+    "discountedPriceInfo": "",
+    "hasCollectable": true,
+    "unitInfo": {
+      "unitPrice": false,
+      "unitPriceText": false
+    },
+    "rushDeliveryMerchantListingExist": false,
+    "lowerPriceMerchantListingExist": false
+  }],
+  "otherMerchants": [],
+  "campaign": {
+    "id": 599739,
+    "name": "Trendyol Collection- Yeni Sezon F\u0131rsatlar\u0131",
+    "startDate": "2022-02-28T03:05:00",
+    "endDate": "2022-03-14T00:00:00",
+    "isMultipleSupplied": false,
+    "stockTypeId": 2,
+    "url": "/trendyol-collection--yeni-sezon-firsatlari/butikdetay/599739",
+    "showTimer": true
+  },
+  "category": {
+    "id": 70,
+    "name": "Pantolon",
+    "hierarchy": "Giyim/Alt Giyim/Pantolon",
+    "refundable": true,
+    "beautifiedName": "pantolon",
+    "isVASEnabled": false
+  },
+  "brand": {
+    "isVirtual": true,
+    "beautifiedName": "trendyolmilla",
+    "id": 101476,
+    "name": "TRENDYOLM\u0130LLA",
+    "path": "/trendyolmilla-x-b101476"
+  },
+  "color": "Siyah",
+  "metaBrand": {
+    "id": 40,
+    "name": "TRENDYOLM\u0130LLA",
+    "beautifiedName": "",
+    "isVirtual": false,
+    "path": ""
+  },
+  "showVariants": true,
+  "showSexualContent": true,
+  "brandCategoryBanners": [],
+  "allVariants": [{
+    "itemNumber": 91180585,
+    "value": "XS",
+    "inStock": false,
+    "currency": "TRY",
+    "barcode": "8682581773959",
+    "price": 159.99
+  }, {
+    "itemNumber": 91180582,
+    "value": "S",
+    "inStock": true,
+    "currency": "TRY",
+    "barcode": "8682581465342",
+    "price": 159.99
+  }, {
+    "itemNumber": 91180583,
+    "value": "M",
+    "inStock": true,
+    "currency": "TRY",
+    "barcode": "8682581465359",
+    "price": 159.99
+  }, {
+    "itemNumber": 91180584,
+    "value": "L",
+    "inStock": true,
+    "currency": "TRY",
+    "barcode": "8682581465366",
+    "price": 159.99
+  }, {
+    "itemNumber": 286503648,
+    "value": "XL",
+    "inStock": false,
+    "currency": "TRY",
+    "barcode": "8683044866133",
+    "price": 159.99
+  }],
+  "otherMerchantVariants": [],
+  "installmentBanner": null,
+  "categoryTopRankings": {
+    "name": "bestSeller",
+    "order": 9,
+    "url": "/sirali-urunler?categoryId=70&type=bestSeller&webGenderId=1",
+    "text": "en \u00e7ok sat\u0131lan"
+  },
+  "isVasEnabled": false,
+  "originalCategory": {
+    "id": 529,
+    "name": "Pantolon",
+    "hierarchy": "Giyim/Alt Giyim/Pantolon",
+    "refundable": true,
+    "beautifiedName": "pantolon",
+    "isVASEnabled": false
+  },
+  "landings": [],
+  "id": 51444960,
+  "productCode": "TWOAW21PL0263",
+  "name": "Siyah Y\u0131rtma\u00e7l\u0131 \u0130nterlok \u00d6rme Pantolon TWOAW21PL0263",
+  "nameWithProductCode": "Siyah Y\u0131rtma\u00e7l\u0131 \u0130nterlok \u00d6rme Pantolon TWOAW21PL0263",
+  "description": "",
+  "contentDescriptions": [{
+    "description": "Modelin \u00d6l\u00e7\u00fcleri: Boy: 1.79, G\u00f6\u011f\u00fcs: 75 Bel: 59, Kal\u00e7a: 87",
+    "bold": false
+  }, {
+    "description": "Mankenin \u00fczerindeki \u00fcr\u00fcn S/36 bedendir.",
+    "bold": false
+  }, {
+    "description": "%100 Polyester, \u00d6rme Kuma\u015f",
+    "bold": false
+  }, {
+    "description": "\u00dcr\u00fcnlerimiz TRENDYOL etiketi ile g\u00f6nderilecektir.",
+    "bold": false
+  }, {
+    "description": "Bu \u00fcr\u00fcnden en fazla 10 adet sipari\u015f verilebilir. 10 adetin \u00fczerindeki sipari\u015fleri Trendyol iptal etme hakk\u0131n\u0131 sakl\u0131 tutar.",
+    "bold": false
+  }, {
+    "description": "Kampanya fiyat\u0131ndan sat\u0131lmak \u00fczere 100 adetten fazla stok sunulmu\u015ftur.",
+    "bold": false
+  }, {
+    "description": "Listelenen fiyat 14 Mart 2022 tarihine kadar ge\u00e7erlidir.",
+    "bold": false
+  }, {
+    "description": "Bu \u00fcr\u00fcn indirim kampanyas\u0131na dahil de\u011fildir.",
+    "bold": false
+  }],
+  "productGroupId": 43419500,
+  "tax": 8,
+  "businessUnit": "PL Woman",
+  "maxInstallment": 12,
+  "gender": {
+    "name": "Kad\u0131n",
+    "id": 1
+  },
+  "webGender": {
+    "name": "Kad\u0131n",
+    "id": 1
+  },
+  "url": "/trendyolmilla/siyah-yirtmacli-interlok-orme-pantolon-twoaw21pl0263-p-51444960?boutiqueId=599739&merchantId=968",
+  "images": ["/ty330/product/media/images/20220215/8/50438646/91180582/2/2_org_zoom.jpg", "/ty331/product/media/images/20220215/8/50438646/91180582/3/3_org_zoom.jpg", "/ty330/product/media/images/20220215/8/50438646/91180582/4/4_org_zoom.jpg", "/ty330/product/media/images/20220215/8/50438646/91180582/5/5_org_zoom.jpg", "/ty332/product/media/images/20220215/8/50438646/91180582/6/6_org_zoom.jpg"],
+  "isSellable": true,
+  "isBasketDiscount": false,
+  "hasStock": true,
+  "price": {
+    "profitMargin": 0,
+    "discountedPrice": {
+      "text": "159,99 TL",
+      "value": 159.99
+    },
+    "sellingPrice": {
+      "text": "159,99 TL",
+      "value": 159.99
+    },
+    "originalPrice": {
+      "text": "159,99 TL",
+      "value": 159.99
+    },
+    "currency": "TRY"
+  },
+  "isFreeCargo": false,
+  "promotions": [{
+    "promotionRemainingTime": "Son 43 Dakika",
+    "type": 1,
+    "text": "2. \u00dcr\u00fcne %40 \u0130ndirim",
+    "id": 2685645,
+    "link": "/sr?prm=2685645"
+  }],
+  "merchant": {
+    "isSearchableMerchant": true,
+    "stickers": [],
+    "merchantBadges": [],
+    "id": 968,
+    "name": "Trendyol",
+    "officialName": "DSM GRUP DANI\u015eMANLIK\u0130LET\u0130\u015e.VE SATI\u015e T\u0130C.A.\u015e.",
+    "cityName": "\u0130stanbul",
+    "centralRegistrationSystemNumber": "",
+    "taxNumber": "3130557669",
+    "sellerScore": 8.6,
+    "sellerScoreColor": "BAC82D",
+    "deliveryProviderName": "Trendyol",
+    "sellerLink": "/magaza/trendyol-m-968"
+  },
+  "deliveryInformation": {
+    "isRushDelivery": false,
+    "deliveryDate": "14 - 21 Mart"
+  },
+  "cargoRemainingDays": 2,
+  "isMarketplace": false,
+  "productStamps": [],
+  "hasHtmlContent": false,
+  "favoriteCount": 161918,
+  "uxLayout": "Fashion",
+  "isDigitalGood": false,
+  "isRunningOut": false,
+  "scheduledDelivery": false,
+  "ratingScore": {
+    "averageRating": 4.31,
+    "totalRatingCount": 6640,
+    "totalCommentCount": 5060
+  },
+  "showStarredAttributes": false,
+  "reviewsUrl": "/trendyolmilla/siyah-yirtmacli-interlok-orme-pantolon-twoaw21pl0263-p-51444960/yorumlar",
+  "questionsUrl": "/trendyolmilla/siyah-yirtmacli-interlok-orme-pantolon-twoaw21pl0263-p-51444960/saticiya-sor?merchantId=968",
+  "sellerQuestionEnabled": false,
+  "sizeChartUrl": "/ty166/product/charts/categories/529/brands/40/31029428.JPG",
+  "sizeExpectationAvailable": true,
+  "crossPromotionAward": {
+    "awardType": null,
+    "awardValue": null,
+    "contentId": 0,
+    "merchantId": 0
+  },
+  "rushDeliveryMerchantListingExist": false,
+  "lowerPriceMerchantListingExist": false,
+  "showValidFlashSales": false,
+  "showExpiredFlashSales": false,
+  "walletRebate": {
+    "minPrice": 300,
+    "maxPrice": 10000,
+    "rebateRatio": 0.01
+  },
+  "isArtWork": false
+}

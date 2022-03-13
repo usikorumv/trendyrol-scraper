@@ -81,22 +81,20 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
             soup.find_all("script", {"type": "application/javascript"})
         )
 
+        with open("j.json", "w") as f:
+            f.write(json.dumps(product))
+
         product_id = int(
             soup.find("link", {"rel": "canonical"})
             .get("href")[::-1]
             .split("-")[0][::-1]
         )
-
         product_group_id = self.find_value_from_json(
             "productGroupId", json.dumps(product)
         )[0]
-
         merchant_id = self.find_value_from_json("merchant", json.dumps(product))[0][
             "id"
         ]
-
-        with open("test.json", "w") as f:
-            f.write(json.dumps(product))
 
         try:
             name = soup.find("h1", {"class": "pr-new-br"}).find("span").text.strip()
@@ -109,11 +107,7 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
             seller = ""
 
         try:
-            price = float(
-                soup.find("span", {"class": "prc-dsc"})
-                .text.replace(",", ".")
-                .split()[0]
-            )
+            price = product["price"]["sellingPrice"]["value"]
         except:
             price = ""
 
@@ -130,11 +124,7 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
             colors = []
 
         try:
-            sizes_container = soup.find("div", {"class": "variants"})
-            sizes = [
-                size.text
-                for size in sizes_container.find_all("div", {"class": "sp-itm"})
-            ]
+            sizes = [size["value"] for size in product["allVariants"]]
         except:
             sizes = []
 
