@@ -1,5 +1,6 @@
 import re
 import requests, json, os
+from deep_translator import GoogleTranslator
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -7,7 +8,9 @@ from selenium.webdriver.support.ui import Select
 
 # from selenium.webdriver.chrome.service import Service
 # from webdriver_manager.chrome import ChromeDriverManager
-from deep_translator import GoogleTranslator
+
+
+# Fix line 249 sometimes not able to get
 
 headers = {}
 
