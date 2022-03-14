@@ -244,6 +244,7 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, TranslatorHelper):
             "cross_products": cross_products,
         }
 
+    # Fix (sometimes products isn`t loaded and for that reason we can`t get them)
     def _get_similar_products(self, page):
         soup = BeautifulSoup(page, "lxml")
 
@@ -532,10 +533,15 @@ class TrendyrolService(TredyrolScraper):
 def main():
     service = TrendyrolService()
 
+    # For the test
     service.search_for_product()
 
-    # for key, value in service.get_product_info_from_link(
-    #     "https://www.trendyol.com/altinyildiz-classics/erkek-siyah-slim-fit-dar-kesim-5-cep-chino-pantolon-p-174674661?boutiqueId=597286&merchantId=347"
+    # Usage
+    # scraper = TredyrolScraper()
+    # link = "https://www.trendyol.com/altinyildiz-classics/erkek-siyah-slim-fit-dar-kesim-5-cep-chino-pantolon-p-174674661?boutiqueId=597286&merchantId=347"
+    #
+    # for key, value in scraper.get_product_info_from_link_with_options(
+    #     link, 2, "en"
     # ).items():
     #     print(f"{key}: {value}")
 
