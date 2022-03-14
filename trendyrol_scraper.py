@@ -4,8 +4,10 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+
+# from selenium.webdriver.chrome.service import Service
+# from webdriver_manager.chrome import ChromeDriverManager
+from deep_translator import GoogleTranslator
 
 headers = {}
 
@@ -44,25 +46,91 @@ class JsonHelper:
         return results
 
 
-class GoogleTranslator:
-    pass
+class TranslatorHelper:
+    def get_translator(self, lang):
+        return GoogleTranslator(source="tr", target=lang)
 
 
-class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
+class TredyrolScraper(ChromeDriverProvider, JsonHelper, TranslatorHelper):
     url = "https://www.trendyol.com/"
     img_url = "https://cdn.dsmcdn.com/"
 
     # def __init__(self):
     #     self.driver = self._get_driver()
 
-    def get_product_info_from_link(
-        self, link, price_multiplier=1, language_to_translate=None
+    def get_product_info_from_link_with_options(
+        self, link, price_multiplier=1, language_to_translate="en"
     ):
         response = requests.get(link)
 
         product = self._get_product_info_from_page(response.text)
 
         product["price"] *= price_multiplier
+
+        translator = self.get_translator(language_to_translate)
+
+        return {
+            "img": product["img"],
+            "name": translator.translate(product["name"]),
+            "price": product["price"],
+            "colors": [
+                {
+                    "img": color["img"],
+                    "link": color["link"],
+                    "name": translator.translate(color["name"]),
+                }
+                for color in product["colors"]
+            ],
+            "sizes": product["sizes"],
+            "detailes": [
+                translator.translate(detail) for detail in product["detailes"]
+            ],
+            "species": [
+                {
+                    "name": translator.translate(specie["name"]),
+                    "property": translator.translate(specie["property"]),
+                }
+                for specie in product["species"]
+            ],
+            "feedbacks": [
+                {
+                    "user": feedback["user"],
+                    "comment": translator.translate(feedback["comment"]),
+                    "rate": feedback["rate"],
+                    "likes": feedback["likes"],
+                }
+                for feedback in product["feedbacks"]
+            ],
+            "questions_and_answers": [
+                {
+                    "user": question_and_answer["user"],
+                    "question": translator.translate(question_and_answer["question"]),
+                    "answer": translator.translate(question_and_answer["answer"]),
+                }
+                for question_and_answer in product["questions_and_answers"]
+            ],
+            "seller": product["seller"],
+            "similar_products": [
+                {
+                    "img": similar["img"],
+                    "company": similar["company"],
+                    "name": translator.translate(similar["name"]),
+                    "price": similar["price"],
+                    "link": similar["link"],
+                }
+                for similar in product["similar_products"]
+            ],
+            "cross_products": [
+                {
+                    "img": cross["img"],
+                    "company": cross["company"],
+                    "name": translator.translate(cross["name"]),
+                    "price": cross["price"],
+                    "link": cross["link"],
+                }
+                for cross in product["cross_products"]
+            ],
+        }
 
     def get_product_info_from_link(self, link):
         # self.driver.get(link)
@@ -80,21 +148,14 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
         product = self._get_product_info_from_scripts(
             soup.find_all("script", {"type": "application/javascript"})
         )
+        product_json = json.dumps(product)
 
-        with open("j.json", "w") as f:
-            f.write(json.dumps(product))
+        # with open("test.json", "w") as f:
+        #     f.write(product_json)
 
-        product_id = int(
-            soup.find("link", {"rel": "canonical"})
-            .get("href")[::-1]
-            .split("-")[0][::-1]
-        )
-        product_group_id = self.find_value_from_json(
-            "productGroupId", json.dumps(product)
-        )[0]
-        merchant_id = self.find_value_from_json("merchant", json.dumps(product))[0][
-            "id"
-        ]
+        product_id = product["id"]
+        product_group_id = product["productGroupId"]
+        merchant_id = re.search(r"merchantId=(.*)", product["url"]).group(1)
 
         try:
             name = soup.find("h1", {"class": "pr-new-br"}).find("span").text.strip()
@@ -130,9 +191,7 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
 
         try:
             detailes_container = soup.find("ul", {"class": "detail-desc-list"})
-            detailes = [] + [
-                detail.text for detail in detailes_container.find_all("li")
-            ]
+            detailes = [detail.text for detail in detailes_container.find_all("li")]
         except:
             detailes = []
 
@@ -140,7 +199,8 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
             species_container = soup.find("ul", {"class": "detail-attr-container"})
             species = [
                 {
-                    specie.find("span").text: specie.find("b").text,
+                    "name": specie.find("span").text,
+                    "property": specie.find("b").text,
                 }
                 for specie in species_container.find_all("li")
             ]
@@ -153,7 +213,7 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
             feedbacks = []
 
         try:
-            similar_products = self._get_similar_products()
+            similar_products = self._get_similar_products(page)
         except:
             similar_products = []
 
@@ -185,20 +245,19 @@ class TredyrolScraper(ChromeDriverProvider, JsonHelper, GoogleTranslator):
         }
 
     def _get_similar_products(self, page):
-        pass
-        # soup = BeautifulSoup(page, "lxml")
+        soup = BeautifulSoup(page, "lxml")
 
-        # products_container = soup.find("aside", {"class": "productDetail-Similar"})
+        products_container = soup.find("aside", {"class": "productDetail-Similar"})
 
-        # return [
-        #     {
-        #         "img": product.find("img", {"class": "pd-img"}).get("src"),
-        #         "company": product.find("span", {"class": "pr-rc-br"}).text,
-        #         "name": product.find("span", {"class": "pr-rc-nm"}).text,
-        #         "link": self.url + product.find("a").get("href")[1:],
-        #     }
-        #     for product in products_container.find_all("div", {"class": "pr-rc-w"})
-        # ]
+        return [
+            {
+                "img": product.find("img", {"class": "pd-img"}).get("src"),
+                "company": product.find("span", {"class": "pr-rc-br"}).text,
+                "name": product.find("span", {"class": "pr-rc-nm"}).text,
+                "link": self.url + product.find("a").get("href")[1:],
+            }
+            for product in products_container.find_all("div", {"class": "pr-rc-w"})
+        ]
 
     def _get_cross_products(self, product_id, page=0):
         response = requests.get(
@@ -346,28 +405,17 @@ clearConsole = lambda: os.sys("cls" if os.name in ("nt", "dos") else "clear")
 
 
 class TrendyrolService(TredyrolScraper):
-    actions = [
-        "Next Page",
-        "Select Product",
-        "Search",
-        "Quit",
-    ]
-
     def search_for_product(self):
+        global page, current_product_name, products, first_time, finished
+
         page = 1
+        current_product_name = ""
         products = {}
-        last_product_name = ""
+        first_time, finished = True, False
 
-        while True:
-
-            print()
-            product_name = (
-                last_product_name
-                if last_product_name != ""
-                else input("Product to find: ")
-            )
-            link = super()._get_search_link_of_product(product_name, page)
-            new_products = super().get_products_from_link(link)
+        def display_variants_of_products(name):
+            link = self._get_search_link_of_product(name, page)
+            new_products = self.get_products_from_link(link)
             products.update(new_products)
 
             print(f"[+] Page {page}")
@@ -378,51 +426,106 @@ class TrendyrolService(TredyrolScraper):
                 print(name)
             line()
 
+        def search_product():
+            global page, current_product_name
+
+            products.clear()
+            page = 1
+
+            try:
+                current_product_name = input("Product to find: ")
+
+                display_variants_of_products(current_product_name)
+            except Exception as e:
+                print(f"[Error] {e}")
+
+            # current_product_name = input("Product to find: ")
+
+            # display_variants_of_products(current_product_name)
+
+        def next_page():
+            global products, page, current_product_name
+
+            page += 1
+
+            try:
+                display_variants_of_products(current_product_name)
+            except Exception as e:
+                print(f"[Error] {e}")
+
+        def select_product():
+            while True:
+                selected_product = input("Product to see: ")
+
+                if selected_product in products.keys():
+                    link = products[selected_product]["link"]
+
+                    print(f"[URL] {link}")
+
+                    try:
+                        for key, val in self.get_product_info_from_link_with_options(
+                            link=link, price_multiplier=2, language_to_translate="en"
+                        ).items():
+                            print()
+                            print(f"{key}: {val}")
+                    except Exception as e:
+                        print(e)
+
+                    # for key, val in self.get_product_info_from_link(link).items():
+                    #     print()
+                    #     print(f"{key}: {val}")
+
+                    break
+                else:
+                    print("This product not in the page")
+                    break
+
+        def quit():
+            global finished
+            finished = True
+
+        actions = [
+            {
+                "name": "Search Product",
+                "function": search_product,
+            },
+            {
+                "name": "Next Page",
+                "function": next_page,
+            },
+            {
+                "name": "Select Product",
+                "function": select_product,
+            },
+            {
+                "name": "Quit",
+                "function": quit,
+            },
+        ]
+
+        while not finished:
+            if first_time:
+                search_product()
+                first_time = False
+
             while True:
                 print()
                 print("Available actions:")
-                for i, e in enumerate(self.actions):
-                    print(f"{i + 1}. {e}")
-                action = int(input("Option: "))
-                if action > 0 and action <= len(self.actions):
+                for i, action in enumerate(actions):
+                    print(f"{i + 1}. {action['name']}")
+                try:
+                    option = int(input("Option: "))
+                    actions[option - 1]["function"]()
                     break
-                else:
-                    print(f"We don`t have '{action}' option")
+                except Exception as e:
+                    print(f"We don`t have '{option}' option")
 
-            if action == 1:
-                last_product_name = product_name
-                page += 1
-                continue
-
-            if action == 2:
-                print()
-                last_product_name = product_name
-                while True:
-                    selected_product = input("Product to see: ")
-                    if selected_product in products.keys():
-                        link = products[selected_product]["link"]
-                        print()
-                        print(f"[URL] {link}")
-                        for key, val in (
-                            super().get_product_info_from_link(link).items()
-                        ):
-                            print()
-                            print(f"{key}: {val}")
-                        break
-                    else:
-                        print("This product not in the page")
-                        break
-
-            if action == 3:
-                products.clear()
-                last_product_name = ""
-                page = 1
-                continue
-
-            if action == 4:
-                break
+                # option = int(input("Option: "))
+                # actions[option - 1]["function"]()
+                # break
 
             print()
+
             input("[Press enter to continue]")
 
 
