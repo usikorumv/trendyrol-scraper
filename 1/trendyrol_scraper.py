@@ -509,14 +509,6 @@ class TrendyrolService(TredyrolScraper):
 
             input("[Press enter to continue]")
 
-def generate_dict(length):
-    final = {}
-
-    if iteration >= length:
-        return
-
-    
-
 def main():
     service = TrendyrolService()
 
