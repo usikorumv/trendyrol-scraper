@@ -2,11 +2,8 @@ import os
 import json
 import requests
 import asyncio
-from bs4 import BeautifulSoup
-from deep_translator import GoogleTranslator
 
 from time import time
-
 
 class DictionaryUtils:
     @staticmethod
@@ -103,15 +100,8 @@ class TrendyolScraper:
         },
     ]
 
-    def get_products(self):
+    def get_products(self, ):
         pass
-    
-    # Make with api url
-    def get_search_link_of_product(self, name, page=1):
-        beautifiedName = "%20".join(product.split())
-        trendyrol_search_link = f"https://www.trendyol.com/sr?q={beautifiedName}&qt={beautifiedName}&st={beautifiedName}&os=1"
-
-        return trendyrol_search_link + f"&pi={page}"
 
     # Add session paramether
     def get_categories(self, link):
@@ -162,12 +152,11 @@ class TrendyolScraper:
 
 
 def main():
-    service = TrendyolScraper()
+    scraper= TrendyolScraper()
 
     start_time = time()
-    print(service.get_categories_tree())
+    print(scraper.get_categories_tree())
     print(time() - start_time)
 
 
-if __name__ == "__main__":
-    main()
+main()
