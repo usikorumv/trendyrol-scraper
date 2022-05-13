@@ -4,6 +4,12 @@ import aiohttp
 
 from time import time
 
+# TODO: CREATE get_aggregations(link) function
+# TODO: MAKE FULL ASYNCHRONOMOUS get_all_categories
+# TODO: write2file PARAMETER FOR SEVERAL FUCTIONS
+# TODO: DRY
+
+
 class DictionaryUtils:
     @staticmethod
     def get_recursively(search_dict: dict(), to_find):
@@ -105,6 +111,97 @@ class TrendyolScraper:
     # def get_all_products(self):
     #     pass
 
+    # GET COLORS
+    all_sizes = set()
+
+    async def get_sizes_from_link(self, session, link):
+        async with session.get(self.aggregations_api + link) as response:
+            data = ujson.loads(await response.text())
+
+            try:
+                aggregations = data["result"]["aggregations"]
+
+                sizes_aggregation = next(
+                    item for item in aggregations if item["group"] == "VARIANT"
+                )
+                sizes = sizes_aggregation["values"]
+
+                for size in sizes:
+                    self.all_sizes.add(
+                        tuple(
+                            {
+                                "name": size["text"],
+                                "slug": size["beautifiedName"],
+                                "link": size["url"],
+                            }.items()
+                        )
+                    )
+            except Exception as e:
+                with open("error.json", "w") as f:
+                    f.write(ujson.dumps(data))
+
+                print(e)
+
+    async def fetch_all_sizes(self):
+        tasks = []
+
+        async with aiohttp.ClientSession() as session:
+            for category in self.categories:
+                tasks.append(self.get_sizes_from_link(session, category["link"]))
+
+            await asyncio.gather(*tasks)
+
+    def get_all_sizes(self):
+        asyncio.run(self.fetch_all_sizes())
+
+        return [dict(tup) for tup in self.all_sizes]
+
+    # GET BRANDS
+    all_brands = set()
+
+    async def get_brands_from_link(self, session, link):
+        async with session.get(self.aggregations_api + link) as response:
+            data = ujson.loads(await response.text())
+
+            try:
+                aggregations = data["result"]["aggregations"]
+
+                brands_aggregation = next(
+                    item for item in aggregations if item["group"] == "BRAND"
+                )
+                brands = brands_aggregation["values"]
+
+                for brand in brands:
+                    self.all_brands.add(
+                        tuple(
+                            {
+                                "name": brand["text"],
+                                "slug": brand["beautifiedName"],
+                                "link": brand["url"],
+                            }.items()
+                        )
+                    )
+            except Exception as e:
+                with open("error.json", "w") as f:
+                    f.write(ujson.dumps(data))
+
+                print(e)
+
+    async def fetch_all_brands(self):
+        tasks = []
+
+        async with aiohttp.ClientSession() as session:
+            for category in self.categories:
+                tasks.append(self.get_brands_from_link(session, category["link"]))
+
+            await asyncio.gather(*tasks)
+
+    def get_all_brands(self):
+        asyncio.run(self.fetch_all_brands())
+
+        return [dict(tup) for tup in self.all_brands]
+
+    # GET CATEGORIES
     all_categories = []
 
     async def get_categories_from_link(self, session, link):
@@ -120,8 +217,12 @@ class TrendyolScraper:
                 categories = category_aggregation["values"]
 
                 return categories
-            except:
-                print(data)
+
+            except Exception as e:
+                with open("error.json", "w") as f:
+                    f.write(ujson.dumps(data))
+
+                print(e)
 
     async def get_categories(self, category, write2file=False):
         all_categories = [category]
@@ -132,6 +233,8 @@ class TrendyolScraper:
                 categories = await self.get_categories_from_link(
                     session, all_categories[i]["link"]
                 )
+
+                print(categories)
 
                 if len(categories) > 1:
                     all_categories += [
@@ -174,7 +277,7 @@ def main():
     scraper = TrendyolScraper()
 
     start_time = time()
-    print(scraper.get_all_categories())
+    print(scraper.get_all_brands())
     print(time() - start_time)
 
 
