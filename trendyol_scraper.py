@@ -99,29 +99,31 @@ class TrendyolScraper:
         },
     ]
 
-    def get_all_products(self, category_slug):
-        pass
+    # def get_all_products_from_link(self, link):
+    #     pass
 
-    # def get_products_tree
+    # def get_all_products(self):
+    #     pass
 
     all_categories = []
 
     async def get_categories_from_link(self, session, link):
         async with session.get(self.aggregations_api + link) as response:
-            print(response.ok)
-            
             data = ujson.loads(await response.text())
 
-            aggregations = data["result"]["aggregations"]
+            try:
+                aggregations = data["result"]["aggregations"]
 
-            category_aggregation = next(
-                item for item in aggregations if item["group"] == "CATEGORY"
-            )
-            categories = category_aggregation["values"]
+                category_aggregation = next(
+                    item for item in aggregations if item["group"] == "CATEGORY"
+                )
+                categories = category_aggregation["values"]
 
-            return categories
+                return categories
+            except:
+                print(data)
 
-    async def get_categories(self, category):
+    async def get_categories(self, category, write2file=False):
         all_categories = [category]
 
         async with aiohttp.ClientSession() as session:
@@ -137,7 +139,7 @@ class TrendyolScraper:
                             "name": category["text"],
                             "slug": category["beautifiedName"],
                             "link": category["url"],
-                            "parent": all_categories[i]["link"],
+                            "parent": all_categories[i]["slug"],
                         }
                         for category in categories
                     ]
@@ -153,16 +155,16 @@ class TrendyolScraper:
 
         await asyncio.gather(*tasks)
 
-    def get_all_categories(self):
+    def get_all_categories(self=False):
         asyncio.run(self.fetch_all_categories())
 
         return self.all_categories
 
-    def get_categories_tree(self):
+    def get_categories_tree(self, write2file=False):
         all_categories = self.get_all_categories()
 
         categories_tree = DictionaryUtils.generate_tree(
-            all_categories, "parent", "link"
+            all_categories, "parent", "slug"
         )
 
         return categories_tree
