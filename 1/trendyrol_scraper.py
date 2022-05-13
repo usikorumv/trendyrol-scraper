@@ -1,9 +1,10 @@
-import os
-import json
+import ujson
 import requests
 import asyncio
+import aiohttp
 
 from time import time
+
 
 class DictionaryUtils:
     @staticmethod
@@ -100,46 +101,62 @@ class TrendyolScraper:
         },
     ]
 
-    def get_products(self, ):
+    def get_all_products(self, category_slug):
         pass
 
-    # Add session paramether
-    def get_categories(self, link):
-        response = requests.get(self.aggregations_api + link)
+    # def get_products_tree
 
-        data = json.loads(response.text)
+    all_categories = []
 
-        aggregations = data["result"]["aggregations"]
+    async def get_categories_from_link(self, session, link):
+        async with session.get(self.aggregations_api + link) as response:
+            data = ujson.loads(await response.text())
 
-        category_aggregation = next(
-            item for item in aggregations if item["group"] == "CATEGORY"
-        )
-        categories = category_aggregation["values"]
+            aggregations = data["result"]["aggregations"]
 
-        return categories
+            category_aggregation = next(
+                item for item in aggregations if item["group"] == "CATEGORY"
+            )
+            categories = category_aggregation["values"]
 
-    # Convert to asynchromous
-    # get_all_categories(self, need_parent)
+            return categories
+
+    async def get_categories(self, category):
+        all_categories = [category]
+
+        async with aiohttp.ClientSession() as session:
+            i = 0
+            while i < len(all_categories):
+                categories = await self.get_categories_from_link(
+                    session, all_categories[i]["link"]
+                )
+
+                if len(categories) > 1:
+                    all_categories += [
+                        {
+                            "name": category["text"],
+                            "slug": category["beautifiedName"],
+                            "link": category["url"],
+                            "parent": all_categories[i]["link"],
+                        }
+                        for category in categories
+                    ]
+                i += 1
+
+        self.all_categories += all_categories
+
+    async def fetch_all_categories(self):
+        tasks = []
+
+        for category in self.categories:
+            tasks.append(self.get_categories(category))
+
+        await asyncio.gather(*tasks)
+
     def get_all_categories(self):
-        all_categories = self.categories.copy()
+        asyncio.run(self.fetch_all_categories())
 
-        i = 0
-        while i < len(all_categories):
-            categories = self.get_categories(all_categories[i]["link"])
-
-            if len(categories) > 1:
-                all_categories += [
-                    {
-                        "name": category["text"],
-                        "slug": category["beautifiedName"],
-                        "link": category["url"],
-                        "parent": all_categories[i]["link"],
-                    }
-                    for category in categories
-                ]
-            i += 1
-
-        return all_categories
+        return self.all_categories
 
     def get_categories_tree(self):
         all_categories = self.get_all_categories()
@@ -152,11 +169,12 @@ class TrendyolScraper:
 
 
 def main():
-    scraper= TrendyolScraper()
+    scraper = TrendyolScraper()
 
     start_time = time()
-    print(scraper.get_categories_tree())
+    print(scraper.get_all_categories())
     print(time() - start_time)
 
 
-main()
+if __name__ == "__main__":
+    main()
