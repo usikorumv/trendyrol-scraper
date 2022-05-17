@@ -1,14 +1,14 @@
+import math
 import ujson
 import asyncio
 import aiohttp
+import requests_ip_rotator
 
 from time import time
 
-# TODO: MAKE FULL ASYNCHRONOMOUS get_all_categories
+# TODO: MAKE FULL ASYNCHRONOMOUS get_all_categories []
 # TODO: write2file PARAMETER FOR SEVERAL FUCTIONS
-# TODO: DRY
-# TODO: get_all_products()
-
+# TODO: DRY AND REFACTOR
 
 class DictionaryUtils:
     @staticmethod
@@ -35,31 +35,11 @@ class DictionaryUtils:
 
     @staticmethod
     def get_dict_by_key_value(lst, key, value):
-        return next(item for item in aggregations if item[key] == value)
+        return next(item for item in lst if item[key] == value)
 
     @staticmethod
-    def get_unique_list_of_dict(lst):
+    def get_unique_list_from_dicts(lst):
         return [dict(t) for t in {tuple(d.items()) for d in lst}]
-
-    # @staticmethod
-    # def
-    # @staticmethod
-    # def delete_recursively(dict_: dict, condition=lambda x: x is None):
-    #     for key, value in dict_.copy().items():
-    #         if isinstance(value, dict):
-    #             results = DictionaryUtils.delete_recursively(value, condition)
-    #             for k, v in results.items():
-    #                 if condition(v):
-    #                     del results[k]
-
-    #         elif isinstance(value, list):
-    #             for item in value:
-    #                 if isinstance(item, dict):
-    #                     more_results = DictionaryUtils.delete_recursively(item, condition)
-    #                     for k, v in more_results.items():
-    #                         if condition(v):
-    #                             del more_results[k]
-    #     return dict_
 
     @staticmethod
     def generate_tree(data, parent, parent_key):
@@ -91,6 +71,16 @@ class DictionaryUtils:
         # return new_data
 
 
+headers = {
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15",
+    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+}
+
+# class IPRotator:
+    
+
+
 class TrendyolScraper:
     site_url = "https://www.trendyol.com"
     img_url = "https://cdn.dsmcdn.com"
@@ -98,6 +88,7 @@ class TrendyolScraper:
     aggregations_api = (
         "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/aggregations"
     )
+
     products_api = "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll"
 
     categories = [
@@ -117,37 +108,88 @@ class TrendyolScraper:
             "link": "/cocuk-giyim-x-g3-c82",
         },
     ]
+    #
 
     # GET PRODUCTS
+    count = 0
     all_products = []
 
-    # def get_products_api(self, link, page):
-    #     return self.products_api + link + f"?pi={page}"
+    def get_products_api(self, link, page):
+        return self.products_api + link + f"?pi={page}"
 
-    # async def get_all_products_from_link(self, session, link, page):
-    #     async with session.get(self.get_products_api(link, page)) as response:
-    #         data = ujson.loads(await response.text())
+    async def get_pagination_of_products_from_link(self, session: aiohttp.ClientSession, link):
+        async with session.get(
+            self.get_products_api(link, 1), headers=headers
+        ) as response:
+            print(self.get_products_api(link, 1))
+            print(response)
+            data = ujson.loads(await response.text())
 
-    #         products = data["result"]["products"]
+            products_data = data["result"]
 
-    #         self.all_products += [
-    #             {
-    #                 "name": product["name"],
-    #                 ""
-    #             }
-    #             for product in products
-    #         ]
+            total_pages = products_data["totalCount"]
 
-    #     pass
+            pagination = math.floor(total_pages / 23)
+
+            return pagination + 1
+
+    async def get_all_products_from_link(self, session, link, page):
+        async with session.get(
+            self.get_products_api(link, page),
+            headers=headers,
+        ) as response:
+            try:
+                data = ujson.loads(await response.text())
+
+                products = data["result"]["products"]
+
+                self.all_products += [
+                    product
+                    # {
+                    #     "name": product["name"],
+                    #     "": ,
+                    # }
+                    for product in products
+                ]
+
+                print(page)
+
+                self.count += 1
+            except:
+                print(f"{page} failed")
+                
+
+    async def fetch_all_products(self):
+        self.all_products = []
+
+        async with aiohttp.ClientSession() as session:
+            # pagination = await self.get_pagination_of_products_from_link(session, category["link"])
+            tasks = [
+                self.get_all_products_from_link(session, self.categories[0]["link"], page)
+                # self.get_all_products_from_link(session, category["link"], page)
+                for page in range(1, 1000)
+                # # for page in range(1, pagination):
+                # for category in self.categories
+            ]
+
+            await asyncio.gather(*tasks)
 
     def get_all_products(self):
-        pass
+        asyncio.run(self.fetch_all_products())
+
+        print(f"{self.count} is done")
+
+        return self.all_products
 
     # GET AGGREGATIONS
     aggregations = []
 
     async def get_aggregations(self, session, link):
-        async with session.get(self.aggregations_api + link) as response:
+        async with session.get(
+            self.aggregations_api + link, headers=headers
+        ) as response:
+            self.aggregations = []
+
             data = ujson.loads(await response.text())
 
             aggregations = data["result"]["aggregations"]
@@ -158,29 +200,25 @@ class TrendyolScraper:
     all_colors = []
 
     async def get_colors_from_link(self, session, link):
-        async with session.get(self.aggregations_api + link) as response:
+        async with session.get(
+            self.aggregations_api + link, headers=headers
+        ) as response:
             data = ujson.loads(await response.text())
 
-            try:
-                aggregations = data["result"]["aggregations"]
+            aggregations = data["result"]["aggregations"]
 
-                colors_aggregation = next(
-                    item for item in aggregations if item["group"] == "ATTRIBUTE"
-                )
-                colors = colors_aggregation["values"]
+            colors_aggregation = next(
+                item for item in aggregations if item["group"] == "ATTRIBUTE"
+            )
+            colors = colors_aggregation["values"]
 
-                self.all_colors += [
-                    {
-                        "name": color["text"],
-                        "slug": color["beautifiedName"],
-                    }
-                    for color in colors
-                ]
-            except Exception as e:
-                with open("error.json", "w", encoding="utf") as f:
-                    ujson.dump(aggregations, f)
-
-                print(e)
+            self.all_colors += [
+                {
+                    "name": color["text"],
+                    "slug": color["beautifiedName"],
+                }
+                for color in colors
+            ]
 
     async def fetch_all_colors(self):
         tasks = []
@@ -194,36 +232,31 @@ class TrendyolScraper:
     def get_all_colors(self):
         asyncio.run(self.fetch_all_colors())
 
-        return DictionaryUtils.get_unique_list_of_dict(self.all_colors)
+        return DictionaryUtils.get_unique_list_from_dicts(self.all_colors)
 
     # GET SIZES
     all_sizes = []
 
     async def get_sizes_from_link(self, session, link):
-        async with session.get(self.aggregations_api + link) as response:
+        async with session.get(
+            self.aggregations_api + link, headers=headers
+        ) as response:
             data = ujson.loads(await response.text())
 
-            try:
-                aggregations = data["result"]["aggregations"]
+            aggregations = data["result"]["aggregations"]
 
-                sizes_aggregation = next(
-                    item for item in aggregations if item["group"] == "VARIANT"
-                )
-                sizes = sizes_aggregation["values"]
+            sizes_aggregation = next(
+                item for item in aggregations if item["group"] == "VARIANT"
+            )
+            sizes = sizes_aggregation["values"]
 
-                self.all_sizes += [
-                    {
-                        "name": size["text"],
-                        "slug": size["beautifiedName"],
-                    }
-                    for size in sizes
-                ]
-
-            except Exception as e:
-                with open("error.json", "w", encoding="utf") as f:
-                    ujson.dump(aggregations, f)
-
-                print(e)
+            self.all_sizes += [
+                {
+                    "name": size["text"],
+                    "slug": size["beautifiedName"],
+                }
+                for size in sizes
+            ]
 
     async def fetch_all_sizes(self):
         tasks = []
@@ -237,35 +270,33 @@ class TrendyolScraper:
     def get_all_sizes(self):
         asyncio.run(self.fetch_all_sizes())
 
-        return DictionaryUtils.get_unique_list_of_dict(self.all_sizes)
+        print(self.count)
+
+        return DictionaryUtils.get_unique_list_from_dicts(self.all_sizes)
 
     # GET BRANDS
     all_brands = []
 
     async def get_brands_from_link(self, session, link):
-        async with session.get(self.aggregations_api + link) as response:
+        async with session.get(
+            self.aggregations_api + link, headers=headers
+        ) as response:
             data = ujson.loads(await response.text())
 
-            try:
-                aggregations = data["result"]["aggregations"]
+            aggregations = data["result"]["aggregations"]
 
-                brands_aggregation = next(
-                    item for item in aggregations if item["group"] == "BRAND"
-                )
-                brands = brands_aggregation["values"]
+            brands_aggregation = next(
+                item for item in aggregations if item["group"] == "BRAND"
+            )
+            brands = brands_aggregation["values"]
 
-                self.all_brands += [
-                    {
-                        "name": brand["text"],
-                        "slug": brand["beautifiedName"],
-                    }
-                    for brand in brands
-                ]
-            except Exception as e:
-                with open("error.json", "w", encoding="utf") as f:
-                    ujson.dump(aggregations, f)
-
-                print(e)
+            self.all_brands += [
+                {
+                    "name": brand["text"],
+                    "slug": brand["beautifiedName"],
+                }
+                for brand in brands
+            ]
 
     async def fetch_all_brands(self):
         tasks = []
@@ -279,29 +310,30 @@ class TrendyolScraper:
     def get_all_brands(self):
         asyncio.run(self.fetch_all_brands())
 
-        return DictionaryUtils.get_unique_list_of_dict(self.all_brands)
+        return DictionaryUtils.get_unique_list_from_dicts(self.all_brands)
 
     # GET CATEGORIES
     all_categories = []
 
     async def get_categories_from_link(self, session, link):
-        async with session.get(self.aggregations_api + link) as response:
-            data = ujson.loads(await response.text())
-
+        async with session.get(
+            self.aggregations_api + link, headers=headers
+        ) as response:
             try:
+                data = ujson.loads(await response.text())
+
                 aggregations = data["result"]["aggregations"]
 
-                category_aggregation = next(
-                    item for item in aggregations if item["group"] == "CATEGORY"
+                category_aggregation = DictionaryUtils.get_dict_by_key_value(
+                    aggregations, "group", "CATEGORY"
                 )
                 categories = category_aggregation["values"]
 
                 return categories
 
             except Exception as e:
-                with open("error.json", "w", encoding="utf") as f:
-                    ujson.dump(aggregations, f)
-
+                print(self.aggregations_api + link)
+                print(response.ok)
                 print(e)
 
     async def get_categories(self, category, write2file=False):
@@ -314,18 +346,33 @@ class TrendyolScraper:
                     session, all_categories[i]["link"]
                 )
 
-                print(categories)
+                try:
+                    if len(categories) > 1:
+                        print()
 
-                if len(categories) > 1:
-                    all_categories += [
-                        {
-                            "name": category["text"],
-                            "slug": category["beautifiedName"],
-                            "link": category["url"],
-                            "parent": all_categories[i]["slug"],
-                        }
-                        for category in categories
-                    ]
+                        for category in categories:
+                            print(category["text"])
+
+                        all_categories += [
+                            {
+                                "name": category["text"],
+                                "slug": category["beautifiedName"],
+                                "link": category["url"],
+                                "parent": all_categories[i]["slug"],
+                            }
+                            for category in categories
+                        ]
+                except Exception as e:
+                    print(categories)
+                    print(e)
+
+                    # tries = 0
+
+                    # while tries > 0:
+                    #     tries -= 1
+                    #     await asyncio.sleep(15)
+                    #     # make continue for outter while
+
                 i += 1
 
         self.all_categories += all_categories
@@ -343,29 +390,28 @@ class TrendyolScraper:
 
         return self.all_categories
 
-    def get_categories_tree(self, write2file=False):
-        all_categories = self.get_all_categories()
-
-        categories_tree = DictionaryUtils.generate_tree(
-            all_categories, "parent", "slug"
-        )
-
-        return categories_tree
-
 
 def main():
     scraper = TrendyolScraper()
 
     start_time = time()
 
-    with open("sizes.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_sizes(), f)
+    # scraper.get_all_products()
 
-    with open("brands.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_brands(), f)
+    # with open("products.json", "w", encoding="utf-8") as f:
+    #     ujson.dump(scraper.get_all_products(), f)
 
-    with open("colors.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_colors(), f)
+    with open("categories.json", "w", encoding="utf-8") as f:
+        ujson.dump(scraper.get_all_categories(), f)
+
+    # with open("sizes.json", "w", encoding="utf-8") as f:
+    #     ujson.dump(scraper.get_all_sizes(), f)
+
+    # with open("brands.json", "w", encoding="utf-8") as f:
+    #     ujson.dump(scraper.get_all_brands(), f)
+
+    # with open("colors.json", "w", encoding="utf-8") as f:
+    #     ujson.dump(scraper.get_all_colors(), f)
 
     print(time() - start_time)
 
