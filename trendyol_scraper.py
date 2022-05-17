@@ -114,8 +114,11 @@ class TrendyolScraper:
     count = 0
     all_products = []
 
-    def get_products_api(self, link, page):
-        return self.products_api + link + f"?pi={page}"
+    def get_products_api(self, link, page=0):
+        url = self.products_api + link
+        if page != 0:
+            return url + f"?pi={page}"
+        return  url
 
     async def get_pagination_of_products_from_link(self, session: aiohttp.ClientSession, link):
         async with session.get(
@@ -167,7 +170,7 @@ class TrendyolScraper:
             tasks = [
                 self.get_all_products_from_link(session, self.categories[0]["link"], page)
                 # self.get_all_products_from_link(session, category["link"], page)
-                for page in range(1, 1000)
+                for page in range(1000)
                 # # for page in range(1, pagination):
                 # for category in self.categories
             ]
@@ -214,6 +217,7 @@ class TrendyolScraper:
 
             self.all_colors += [
                 {
+                    "id": color["id"],
                     "name": color["text"],
                     "slug": color["beautifiedName"],
                 }
@@ -252,6 +256,7 @@ class TrendyolScraper:
 
             self.all_sizes += [
                 {
+                    "id": size["id"],
                     "name": size["text"],
                     "slug": size["beautifiedName"],
                 }
@@ -292,6 +297,7 @@ class TrendyolScraper:
 
             self.all_brands += [
                 {
+                    "id": brand["id"],
                     "name": brand["text"],
                     "slug": brand["beautifiedName"],
                 }
@@ -355,23 +361,17 @@ class TrendyolScraper:
 
                         all_categories += [
                             {
+                                "id": category["id"],
                                 "name": category["text"],
                                 "slug": category["beautifiedName"],
                                 "link": category["url"],
+                                "count": category["count"],
                                 "parent": all_categories[i]["slug"],
                             }
                             for category in categories
                         ]
                 except Exception as e:
-                    print(categories)
                     print(e)
-
-                    # tries = 0
-
-                    # while tries > 0:
-                    #     tries -= 1
-                    #     await asyncio.sleep(15)
-                    #     # make continue for outter while
 
                 i += 1
 
@@ -396,22 +396,21 @@ def main():
 
     start_time = time()
 
-    # scraper.get_all_products()
-
-    # with open("products.json", "w", encoding="utf-8") as f:
-    #     ujson.dump(scraper.get_all_products(), f)
+    with open("products.json", "w", encoding="utf-8") as f:
+        ujson.dump(scraper.get_all_products(), f)
 
     with open("categories.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_categories(), f)
+        categories = scraper.get_all_categories()
+        ujson.dump(categories, f)
 
-    # with open("sizes.json", "w", encoding="utf-8") as f:
-    #     ujson.dump(scraper.get_all_sizes(), f)
+    with open("sizes.json", "w", encoding="utf-8") as f:
+        ujson.dump(scraper.get_all_sizes(), f)
 
-    # with open("brands.json", "w", encoding="utf-8") as f:
-    #     ujson.dump(scraper.get_all_brands(), f)
+    with open("brands.json", "w", encoding="utf-8") as f:
+        ujson.dump(scraper.get_all_brands(), f)
 
-    # with open("colors.json", "w", encoding="utf-8") as f:
-    #     ujson.dump(scraper.get_all_colors(), f)
+    with open("colors.json", "w", encoding="utf-8") as f:
+        ujson.dump(scraper.get_all_colors(), f)
 
     print(time() - start_time)
 
