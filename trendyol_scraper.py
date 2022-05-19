@@ -1,14 +1,19 @@
 import math
-import ujson
-import asyncio
-import aiohttp
-import requests_ip_rotator
+
+import os.path
+from os import path
+from os import mkdir
+
+import ujson, asyncio, aiohttp
 
 from time import time
 
 # TODO: MAKE FULL ASYNCHRONOMOUS get_all_categories []
 # TODO: write2file PARAMETER FOR SEVERAL FUCTIONS
 # TODO: DRY AND REFACTOR
+# TODO: CREATE FILE INCLUDE AUTO FOLDER CREATION IF IT IS IN PATH
+# TODO: OPTIMIZE 1
+
 
 class DictionaryUtils:
     @staticmethod
@@ -71,14 +76,24 @@ class DictionaryUtils:
         # return new_data
 
 
+class MyUtils:
+    @staticmethod
+    def create_file(path, info):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(info)
+
+    @staticmethod
+    def create_folder(name):
+        if path.exists(name):
+            return
+        mkdir(name)
+
+
 headers = {
     "Accept": "application/json, text/plain, */*",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15",
     "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
 }
-
-# class IPRotator:
-    
 
 
 class TrendyolScraper:
@@ -90,6 +105,8 @@ class TrendyolScraper:
     )
 
     products_api = "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll"
+
+    product_group_api = "https://public.trendyol.com/discovery-web-websfxproductgroups-santral/api/v1/product-groups"
 
     categories = [
         {
@@ -111,93 +128,188 @@ class TrendyolScraper:
     #
 
     # GET PRODUCTS
-    count = 0
     all_products = []
 
-    def get_products_api(self, link, page=0):
+    def get_products_page_api(self, link, page=0):
         url = self.products_api + link
         if page != 0:
             return url + f"?pi={page}"
-        return  url
+        return url
 
-    async def get_pagination_of_products_from_link(self, session: aiohttp.ClientSession, link):
+    def get_product_detail_api(self, id):
+        return f"https://public.trendyol.com/discovery-web-productgw-service/api/productDetail/{id}?linearVariants=true"
+
+    # async def get_pagination_of_products_from_link(
+    #     self, session: aiohttp.ClientSession, link
+    # ):
+    #     async with session.get(
+    #         self.get_products_api(link, 1), headers=headers
+    #     ) as response:
+    #         print(self.get_products_api(link, 1))
+    #         print(response)
+    #         data = ujson.loads(await response.text())
+
+    #         products_data = data["result"]
+
+    #         total_pages = products_data["totalCount"]
+
+    #         pagination = math.floor(total_pages / 23)
+
+    #         return pagination + 1
+
+    async def get_product_attributes(self, session, raw_product):
         async with session.get(
-            self.get_products_api(link, 1), headers=headers
-        ) as response:
-            print(self.get_products_api(link, 1))
-            print(response)
-            data = ujson.loads(await response.text())
-
-            products_data = data["result"]
-
-            total_pages = products_data["totalCount"]
-
-            pagination = math.floor(total_pages / 23)
-
-            return pagination + 1
-
-    async def get_all_products_from_link(self, session, link, page):
-        async with session.get(
-            self.get_products_api(link, page),
-            headers=headers,
+            f"{self.product_group_api}/{raw_product['productGroupId']}", headers=headers
         ) as response:
             try:
                 data = ujson.loads(await response.text())
 
-                products = data["result"]["products"]
+                slicing_attributes = data["result"]["slicingAttributes"][0]["attributes"]
 
-                self.all_products += [
-                    product
-                    # {
-                    #     "name": product["name"],
-                    #     "": ,
-                    # }
-                    for product in products
-                ]
+                attributes = []
+                for slicing_attribute in slicing_attributes:
+                    attribute = slicing_attribute["contents"][0]
+                    attributes.append(
+                        {
+                            "id": attribute["id"],
+                            "name": slicing_attribute["name"],
+                            "slug": slicing_attribute["beautifiedName"],
+                            "link": attribute["url"],
+                        }
+                    )
 
-                print(page)
-
-                self.count += 1
+                return attributes
             except:
-                print(f"{page} failed")
+                pass
+    
+    async def get_product_colors_and_sizes(self, session, attributes):
+        for attribute in attributes:
+            async with session.get(self.get_product_detail_api(attribute["id"])) as response:
+                data = ujson.loads(await response.text())
+
+                product = data["result"]
                 
+                definition = product[""]
+                category = product["originalCategory"]
+                brand = product["brand"]
+                colors = product["allVa"]
+
+                return {
+                    "category": {
+                        "id": category["id"],
+                        "name": category["name"],
+                        "slug": category["beautifiedName"],
+                    },
+                    "brand": {
+                        "id": brand["id"],
+                        "name": brand["name"],
+                        "slug": brand["beautifiedName"],
+                    },
+                    "sizes": [product["allVariants"]],
+
+                }
+
+    async def get_product_data(self, session, raw_product: dict):
+        attributes = await self.get_product_attributes(session, raw_product)
+
+        if attributes is not None:
+            for attribute in attributes:
+                pass
+
+        return {
+            "image": images[0],
+            "name": name,
+            "price": "",
+            "colors": {
+
+            },
+        }
+
+    async def get_all_products_from_link(self, session, link, page):
+        async with session.get(
+            self.get_products_page_api(link, page),
+            headers=headers,
+        ) as response:
+            # try:
+            data = ujson.loads(await response.text())
+
+            products = data["result"]["products"]
+
+            for product in products:
+                self.all_products.append(await self.get_product_data(session, product))
+
+            # self.all_products += [
+            #     await self.get_product_data(session, product)
+            #     for product in products
+            # ]
+
+            print(f"Link: {link}\nPage: {page}\n")
+            # except Exception as e:
+            #     print(e)
+            #     pass
+            # print(f"{page} failed")
 
     async def fetch_all_products(self):
         self.all_products = []
 
+        # OPTIMIZE 1
+        ctgr_path = "output/categories.json"
+        if path.exists(ctgr_path):
+            with open(ctgr_path, "r") as f:
+                categories = ujson.loads(f.read())
+        else:
+            self.get_all_categories(write2file=True)
+
+        end_categories = []
+        for category in categories:
+            parent = True
+            for compare in categories:
+                if compare.get("parent", "") == "":
+                    continue
+                if category["slug"] == compare["slug"]:
+                    continue
+                if category["slug"] == compare["parent"]:
+                    parent = True
+                    break
+                parent = False
+
+            if not parent:
+                end_categories.append(category)
+        #
+
         async with aiohttp.ClientSession() as session:
             # pagination = await self.get_pagination_of_products_from_link(session, category["link"])
             tasks = [
-                self.get_all_products_from_link(session, self.categories[0]["link"], page)
-                # self.get_all_products_from_link(session, category["link"], page)
-                for page in range(1000)
-                # # for page in range(1, pagination):
-                # for category in self.categories
+                self.get_all_products_from_link(session, category["link"], page)
+                for page in range(1) # JUST FOR TEST
+                for category in end_categories[:1]  # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
 
-    def get_all_products(self):
+    def get_all_products(self, write2file=False):
         asyncio.run(self.fetch_all_products())
 
-        print(f"{self.count} is done")
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
 
         return self.all_products
 
-    # GET AGGREGATIONS
-    aggregations = []
+    # # GET AGGREGATIONS
+    # aggregations = []
 
-    async def get_aggregations(self, session, link):
-        async with session.get(
-            self.aggregations_api + link, headers=headers
-        ) as response:
-            self.aggregations = []
+    # async def get_aggregations(self, session, link):
+    #     async with session.get(
+    #         self.aggregations_api + link, headers=headers
+    #     ) as response:
+    #         self.aggregations = []
 
-            data = ujson.loads(await response.text())
+    #         data = ujson.loads(await response.text())
 
-            aggregations = data["result"]["aggregations"]
+    #         aggregations = data["result"]["aggregations"]
 
-            self.aggregations = aggregations
+    #         self.aggregations = aggregations
 
     # GET COLORS
     all_colors = []
@@ -233,8 +345,12 @@ class TrendyolScraper:
 
             await asyncio.gather(*tasks)
 
-    def get_all_colors(self):
+    def get_all_colors(self, write2file=False):
         asyncio.run(self.fetch_all_colors())
+
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file("output/colors.json", ujson.dumps(self.all_colors))
 
         return DictionaryUtils.get_unique_list_from_dicts(self.all_colors)
 
@@ -272,10 +388,12 @@ class TrendyolScraper:
 
             await asyncio.gather(*tasks)
 
-    def get_all_sizes(self):
+    def get_all_sizes(self, write2file=False):
         asyncio.run(self.fetch_all_sizes())
 
-        print(self.count)
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file("output/sizes.json", ujson.dumps(self.all_sizes))
 
         return DictionaryUtils.get_unique_list_from_dicts(self.all_sizes)
 
@@ -313,8 +431,12 @@ class TrendyolScraper:
 
             await asyncio.gather(*tasks)
 
-    def get_all_brands(self):
+    def get_all_brands(self, write2file=False):
         asyncio.run(self.fetch_all_brands())
+
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file("output/brands.json", ujson.dumps(self.all_brands))
 
         return DictionaryUtils.get_unique_list_from_dicts(self.all_brands)
 
@@ -338,9 +460,10 @@ class TrendyolScraper:
                 return categories
 
             except Exception as e:
-                print(self.aggregations_api + link)
-                print(response.ok)
-                print(e)
+                pass
+                # print(self.aggregations_api + link)
+                # print(response.ok)
+                # print(e)
 
     async def get_categories(self, category, write2file=False):
         all_categories = [category]
@@ -371,7 +494,8 @@ class TrendyolScraper:
                             for category in categories
                         ]
                 except Exception as e:
-                    print(e)
+                    pass
+                    # print(e)
 
                 i += 1
 
@@ -385,8 +509,14 @@ class TrendyolScraper:
 
         await asyncio.gather(*tasks)
 
-    def get_all_categories(self=False):
+    def get_all_categories(self, write2file=False):
         asyncio.run(self.fetch_all_categories())
+
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file(
+                "output/categories.json", ujson.dumps(self.all_categories)
+            )
 
         return self.all_categories
 
@@ -396,21 +526,7 @@ def main():
 
     start_time = time()
 
-    with open("products.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_products(), f)
-
-    with open("categories.json", "w", encoding="utf-8") as f:
-        categories = scraper.get_all_categories()
-        ujson.dump(categories, f)
-
-    with open("sizes.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_sizes(), f)
-
-    with open("brands.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_brands(), f)
-
-    with open("colors.json", "w", encoding="utf-8") as f:
-        ujson.dump(scraper.get_all_colors(), f)
+    scraper.get_all_products()
 
     print(time() - start_time)
 
