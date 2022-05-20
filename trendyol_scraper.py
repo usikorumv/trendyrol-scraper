@@ -162,6 +162,25 @@ class TrendyolScraper:
 
     #         return pagination + 1
 
+    # async def get_products_reviews(self, link):
+    #     "/polo-state/erkek-cok-renkli-regular-bisiklet-yaka-5-li-tisort-paketi-saks-p-115621006/yorumlar"
+
+    #     async with session.get(
+    #         self.get_reccomendations_api(id, "/cross"), headers=headers
+    #     ) as response:
+    #         try:
+    #             data = ujson.loads(await response.text())
+    
+    # async def get_product_questions(self, link):
+    #     "/polo-state/erkek-cok-renkli-regular-bisiklet-yaka-5-li-tisort-paketi-saks-p-115621006/saticiya-sor?merchantId=342783"
+
+    #     async with session.get(
+    #         self.get_reccomendations_api(id, "/cross"), headers=headers
+    #     ) as response:
+    #         try:
+    #             data = ujson.loads(await response.text())
+
+
     async def get_cross_products_id(self, id):
         async with session.get(
             self.get_reccomendations_api(id, "/cross"), headers=headers
@@ -265,7 +284,7 @@ class TrendyolScraper:
                 "reviews": "",
                 "questions": "",
                 "recommendations": await self.get_recommendation_products_id(id),
-                "cross": await self.get_cross_products_id(id)
+                "cross": await self.get_cross_products_id(id),
             }
 
     async def get_product_from_raw_data(self, session, raw_product: dict):
@@ -319,7 +338,8 @@ class TrendyolScraper:
                 print(f"{page} failed")
 
     async def fetch_all_products(self):
-        self.all_products = []
+        all_products = self.all_products
+        all_products.clear()
 
         # OPTIMIZE 1
         with open("output/categories.json", "r") as f:
@@ -346,8 +366,8 @@ class TrendyolScraper:
             # pagination = await self.get_pagination_of_products_from_link(session, category["link"])
             tasks = [
                 self.get_all_products_from_link(session, category["link"], page)
-                for page in range(208 + 1)  # JUST FOR TEST
-                for category in end_categories  # JUST FOR TEST
+                for page in range(1)  # JUST FOR TEST
+                for category in end_categories[:10]  # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
@@ -358,9 +378,9 @@ class TrendyolScraper:
 
         asyncio.run(self.fetch_all_products())
 
-        # if write2file:
-        #     MyUtils.create_folder("output")
-        #     MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
+        if write2file:
+            MyUtils.create_folder("output")
+            MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
 
         return self.all_products
 
