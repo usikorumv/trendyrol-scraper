@@ -302,22 +302,21 @@ class TrendyolScraper:
             self.get_products_api(link, page),
             headers=headers,
         ) as response:
-            # try:
-            data = ujson.loads(await response.text())
+            try:
+                data = ujson.loads(await response.text())
 
-            raw_products = data["result"]["products"]
+                raw_products = data["result"]["products"]
 
-            self.all_products += [
-                await self.get_product_from_raw_data(session, raw_product)
-                for raw_product in raw_products
-            ]
+                self.all_products += [
+                    await self.get_product_from_raw_data(session, raw_product)
+                    for raw_product in raw_products
+                ]
 
-            print(f"Link: {link}\nPage: {page}\n")
+                print(f"Link: {link}\nPage: {page}\n")
 
-            # except Exception as e:
-            #     print(e)
-            #     pass
-            # print(f"{page} failed")
+            except Exception as e:
+                print(e)
+                print(f"{page} failed")
 
     async def fetch_all_products(self):
         self.all_products = []
