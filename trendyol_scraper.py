@@ -1,5 +1,3 @@
-import math
-
 import os.path
 from os import path
 from os import mkdir
@@ -170,7 +168,7 @@ class TrendyolScraper:
     #     ) as response:
     #         try:
     #             data = ujson.loads(await response.text())
-    
+
     # async def get_product_questions(self, link):
     #     "/polo-state/erkek-cok-renkli-regular-bisiklet-yaka-5-li-tisort-paketi-saks-p-115621006/saticiya-sor?merchantId=342783"
 
@@ -180,8 +178,7 @@ class TrendyolScraper:
     #         try:
     #             data = ujson.loads(await response.text())
 
-
-    async def get_cross_products_id(self, id):
+    async def get_cross_products_id(self, session, id):
         async with session.get(
             self.get_reccomendations_api(id, "/cross"), headers=headers
         ) as response:
@@ -194,7 +191,7 @@ class TrendyolScraper:
             except:
                 return []
 
-    async def get_recommendation_products_id(self, id):
+    async def get_recommendation_products_id(self, session, id):
         async with session.get(
             self.get_reccomendations_api(id, "/recommendation"), headers=headers
         ) as response:
@@ -232,7 +229,7 @@ class TrendyolScraper:
 
                 return attributes
             except:
-                return
+                return []
 
     async def get_product_from_id(self, session, id):
         async with session.get(self.get_product_api(id), headers=headers) as response:
@@ -283,38 +280,36 @@ class TrendyolScraper:
                 ),
                 "reviews": "",
                 "questions": "",
-                "recommendations": await self.get_recommendation_products_id(id),
-                "cross": await self.get_cross_products_id(id),
+                "recommendations": await self.get_recommendation_products_id(
+                    session, id
+                ),
+                "cross": await self.get_cross_products_id(session, id),
             }
 
     async def get_product_from_raw_data(self, session, raw_product: dict):
-        # print(await self.get_product_from_id(session, raw_product["id"]))
-
+        print("Getting")
         attributes = await self.get_product_attributes(session, raw_product)
 
+        product = await self.get_product_from_id(session, raw_product["id"])
+        print("First")
+
         # Make async
-        if attributes is not None:
+        if attributes != []:
             for attribute in attributes:
                 colors = [
                     {
                         "name": attribute["name"],
-                        "product": await self.get_product_from_id(
+                        "product": await self.get_product_from_id( # STORE JUST ID`s
                             session, attribute["id"]
                         ),
                     }
                     for attribute in attributes
                 ]
 
-            product = DictionaryUtils.get_dict_by_key_value(
-                [color["product"] for color in colors],
-                "showSize",
-                raw_product["winnerVariant"],
-            )
             product["colors"] = colors
+            print("Return")
 
-            return product
-        else:
-            return await self.get_product_from_id(session, raw_product["id"])
+        return product
 
     async def get_all_products_from_link(self, session, link, page):
         async with session.get(
@@ -331,16 +326,13 @@ class TrendyolScraper:
                     for raw_product in raw_products
                 ]
 
-                print(f"Link: {link}\nPage: {page}\n")
+                print(f"Link: {link}\nPage: {page + 1}\n")
 
             except Exception as e:
                 print(e)
-                print(f"{page} failed")
+                print(f"{page + 1} failed\n")
 
     async def fetch_all_products(self):
-        all_products = self.all_products
-        all_products.clear()
-
         # OPTIMIZE 1
         with open("output/categories.json", "r") as f:
             categories = ujson.loads(f.read())
@@ -362,12 +354,13 @@ class TrendyolScraper:
                 end_categories.append(category)
         #
 
+        self.all_products = []
         async with aiohttp.ClientSession() as session:
-            # pagination = await self.get_pagination_of_products_from_link(session, category["link"])
             tasks = [
                 self.get_all_products_from_link(session, category["link"], page)
                 for page in range(1)  # JUST FOR TEST
-                for category in end_categories[:10]  # JUST FOR TEST
+                for category in end_categories[:2]
+                # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
