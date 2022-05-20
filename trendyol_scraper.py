@@ -104,10 +104,6 @@ class TrendyolScraper:
         "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/aggregations"
     )
 
-    products_api = "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll"
-
-    product_group_api = "https://public.trendyol.com/discovery-web-websfxproductgroups-santral/api/v1/product-groups"
-
     categories = [
         {
             "name": "Kadın Giyim",
@@ -130,14 +126,23 @@ class TrendyolScraper:
     # GET PRODUCTS
     all_products = []
 
-    def get_products_page_api(self, link, page=0):
-        url = self.products_api + link
+    def get_products_api(self, link, page=0):
+        url = (
+            "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll"
+            + link
+        )
         if page != 0:
             return url + f"?pi={page}"
         return url
 
-    def get_product_detail_api(self, id):
+    def get_products_group_api(self, id):
+        return f"https://public.trendyol.com/discovery-web-websfxproductgroups-santral/api/v1/product-groups/{id}"
+
+    def get_product_api(self, id):
         return f"https://public.trendyol.com/discovery-web-productgw-service/api/productDetail/{id}?linearVariants=true"
+
+    def get_reccomendations_api(self, id, group):
+        return f"https://public-mdc.trendyol.com/discovery-web-websfxproductrecommendation-santral/api/v1/product/{id}/{group}?size=20"
 
     # async def get_pagination_of_products_from_link(
     #     self, session: aiohttp.ClientSession, link
@@ -157,14 +162,42 @@ class TrendyolScraper:
 
     #         return pagination + 1
 
-    async def get_product_attributes(self, session, raw_product):
+    async def get_cross_products_id(self, id):
         async with session.get(
-            f"{self.product_group_api}/{raw_product['productGroupId']}", headers=headers
+            self.get_reccomendations_api(id, "/cross"), headers=headers
         ) as response:
             try:
                 data = ujson.loads(await response.text())
 
-                slicing_attributes = data["result"]["slicingAttributes"][0]["attributes"]
+                products = data["result"]["content"]
+
+                return [product["id"] for product in products]
+            except:
+                return []
+
+    async def get_recommendation_products_id(self, id):
+        async with session.get(
+            self.get_reccomendations_api(id, "/recommendation"), headers=headers
+        ) as response:
+            try:
+                data = ujson.loads(await response.text())
+
+                products = data["result"]["content"]
+
+                return [product["id"] for product in products]
+            except:
+                return []
+
+    async def get_product_attributes(self, session, raw_product):
+        async with session.get(
+            self.get_products_group_api(raw_product["productGroupId"]), headers=headers
+        ) as response:
+            try:
+                data = ujson.loads(await response.text())
+
+                slicing_attributes = data["result"]["slicingAttributes"][0][
+                    "attributes"
+                ]
 
                 attributes = []
                 for slicing_attribute in slicing_attributes:
@@ -180,70 +213,107 @@ class TrendyolScraper:
 
                 return attributes
             except:
-                pass
-    
-    async def get_product_colors_and_sizes(self, session, attributes):
-        for attribute in attributes:
-            async with session.get(self.get_product_detail_api(attribute["id"])) as response:
-                data = ujson.loads(await response.text())
+                return
 
-                product = data["result"]
-                
-                definition = product[""]
-                category = product["originalCategory"]
-                brand = product["brand"]
-                colors = product["allVa"]
+    async def get_product_from_id(self, session, id):
+        async with session.get(self.get_product_api(id), headers=headers) as response:
+            data = ujson.loads(await response.text())
 
-                return {
-                    "category": {
-                        "id": category["id"],
-                        "name": category["name"],
-                        "slug": category["beautifiedName"],
-                    },
-                    "brand": {
-                        "id": brand["id"],
-                        "name": brand["name"],
-                        "slug": brand["beautifiedName"],
-                    },
-                    "sizes": [product["allVariants"]],
+            product = data["result"]
 
-                }
+            campaign = product["campaign"]
+            brand = product["brand"]
+            category = product["originalCategory"]
+            brand = product["brand"]
+            sizes = product["allVariants"]
+            description = product["contentDescriptions"]
 
-    async def get_product_data(self, session, raw_product: dict):
+            return {
+                "id": product["id"],
+                "name": product["name"],
+                "link": product["url"],
+                "images": product["images"],
+                "price": product["price"],
+                "campaign": product["merchant"]["name"],
+                "brand": {
+                    "id": brand["id"],
+                    "name": brand["name"],
+                    "slug": brand["beautifiedName"],
+                },
+                "category": {
+                    "id": category["id"],
+                    "name": category["name"],
+                    "slug": category["beautifiedName"],
+                },
+                "color": product["color"],  # REVIEW
+                "showSize": product["variants"][0]["attributeValue"],  # REVIEW
+                "sizes": [
+                    {
+                        "value": size["value"],
+                        "inStock": size["inStock"],
+                        "price": size["price"],
+                        "currency": size["currency"],
+                    }
+                    for size in sizes
+                ],
+                "description": "\n".join(
+                    [
+                        description["description"]
+                        for description in product["contentDescriptions"]
+                    ]
+                ),
+                "reviews": "",
+                "questions": "",
+                "recommendations": await self.get_recommendation_products_id(id),
+                "cross": await self.get_cross_products_id(id)
+            }
+
+    async def get_product_from_raw_data(self, session, raw_product: dict):
+        # print(await self.get_product_from_id(session, raw_product["id"]))
+
         attributes = await self.get_product_attributes(session, raw_product)
 
+        # Make async
         if attributes is not None:
             for attribute in attributes:
-                pass
+                colors = [
+                    {
+                        "name": attribute["name"],
+                        "product": await self.get_product_from_id(
+                            session, attribute["id"]
+                        ),
+                    }
+                    for attribute in attributes
+                ]
 
-        return {
-            "image": images[0],
-            "name": name,
-            "price": "",
-            "colors": {
+            product = DictionaryUtils.get_dict_by_key_value(
+                [color["product"] for color in colors],
+                "showSize",
+                raw_product["winnerVariant"],
+            )
+            product["colors"] = colors
 
-            },
-        }
+            return product
+        else:
+            return await self.get_product_from_id(session, raw_product["id"])
 
     async def get_all_products_from_link(self, session, link, page):
         async with session.get(
-            self.get_products_page_api(link, page),
+            self.get_products_api(link, page),
             headers=headers,
         ) as response:
             # try:
             data = ujson.loads(await response.text())
 
-            products = data["result"]["products"]
+            raw_products = data["result"]["products"]
 
-            for product in products:
-                self.all_products.append(await self.get_product_data(session, product))
-
-            # self.all_products += [
-            #     await self.get_product_data(session, product)
-            #     for product in products
-            # ]
+            self.all_products += [
+                await self.get_product_from_raw_data(session, raw_product)
+                for raw_product in raw_products
+            ]
 
             print(f"Link: {link}\nPage: {page}\n")
+
             # except Exception as e:
             #     print(e)
             #     pass
@@ -253,12 +323,8 @@ class TrendyolScraper:
         self.all_products = []
 
         # OPTIMIZE 1
-        ctgr_path = "output/categories.json"
-        if path.exists(ctgr_path):
-            with open(ctgr_path, "r") as f:
-                categories = ujson.loads(f.read())
-        else:
-            self.get_all_categories(write2file=True)
+        with open("output/categories.json", "r") as f:
+            categories = ujson.loads(f.read())
 
         end_categories = []
         for category in categories:
@@ -281,18 +347,21 @@ class TrendyolScraper:
             # pagination = await self.get_pagination_of_products_from_link(session, category["link"])
             tasks = [
                 self.get_all_products_from_link(session, category["link"], page)
-                for page in range(1) # JUST FOR TEST
-                for category in end_categories[:1]  # JUST FOR TEST
+                for page in range(208 + 1)  # JUST FOR TEST
+                for category in end_categories  # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
 
     def get_all_products(self, write2file=False):
+        if not path.exists("output/categories.json"):
+            self.get_all_categories(write2file=True)
+
         asyncio.run(self.fetch_all_products())
 
-        if write2file:
-            MyUtils.create_folder("output")
-            MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
+        # if write2file:
+        #     MyUtils.create_folder("output")
+        #     MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
 
         return self.all_products
 
@@ -301,7 +370,7 @@ class TrendyolScraper:
 
     # async def get_aggregations(self, session, link):
     #     async with session.get(
-    #         self.aggregations_api + link, headers=headers
+    #         "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/aggregations" + link, headers=headers
     #     ) as response:
     #         self.aggregations = []
 
@@ -372,7 +441,6 @@ class TrendyolScraper:
 
             self.all_sizes += [
                 {
-                    "id": size["id"],
                     "name": size["text"],
                     "slug": size["beautifiedName"],
                 }
@@ -502,10 +570,7 @@ class TrendyolScraper:
         self.all_categories += all_categories
 
     async def fetch_all_categories(self):
-        tasks = []
-
-        for category in self.categories:
-            tasks.append(self.get_categories(category))
+        tasks = [self.get_categories(category) for category in self.categories]
 
         await asyncio.gather(*tasks)
 
@@ -526,7 +591,7 @@ def main():
 
     start_time = time()
 
-    scraper.get_all_products()
+    scraper.get_all_products(write2file=True)
 
     print(time() - start_time)
 
