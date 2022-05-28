@@ -2,7 +2,7 @@ import os.path
 from os import path
 from os import mkdir
 
-import ujson, grequests, asyncio, aiohttp
+import ujson, asyncio, aiohttp
 
 from time import time
 
