@@ -7,9 +7,7 @@ import ujson, asyncio, aiohttp
 from time import time
 
 # TODO: MAKE FULL ASYNCHRONOMOUS get_all_categories []
-# TODO: write2file PARAMETER FOR SEVERAL FUCTIONS
 # TODO: DRY AND REFACTOR
-# TODO: CREATE FILE INCLUDE AUTO FOLDER CREATION IF IT IS IN PATH
 # TODO: OPTIMIZE 1
 
 
@@ -38,7 +36,17 @@ class DictionaryUtils:
 
     @staticmethod
     def get_dict_by_key_value(lst, key, value):
-        return next(item for item in lst if item[key] == value)
+        # next(
+        #   item for item in lst if item[key] == value
+        # )
+
+        for item in lst:  # FIX
+            if item[key] == value:
+                my_item = item
+                break
+        else:
+            # raise Exception(f"dict with '{key}: {value}' wasnt founded")
+            return None
 
     @staticmethod
     def get_unique_list_from_dicts(lst):
@@ -85,6 +93,17 @@ class MyUtils:
         if path.exists(name):
             return
         mkdir(name)
+
+    @staticmethod
+    def progress(percent=0, width=40):
+        left = width * percent // 100
+        right = width - left
+
+        tags = "=" * left
+        spaces = " " * right
+        percents = f" {percent:.0f}%"
+
+        print("\r[", tags, spaces, "]", percents, sep="", end="", flush=True)
 
 
 headers = {
@@ -142,8 +161,11 @@ class TrendyolScraper:
     def get_product_api(self, id):
         return f"https://public.trendyol.com/discovery-web-productgw-service/api/productDetail/{id}?linearVariants=true"
 
-    def get_reccomendations_api(self, id, group):
-        return f"https://public-mdc.trendyol.com/discovery-web-websfxproductrecommendation-santral/api/v1/product/{id}/{group}?size=20"
+    def get_reccomendations_api(self, id, link):
+        return f"https://public-mdc.trendyol.com/discovery-web-websfxproductrecommendation-santral/api/v1/product/{id}{link}?size=20&version=1&page=0"
+
+    def get_product_reviews_api(self, id, page, size=10):
+        return f"https://public-mdc.trendyol.com/discovery-web-socialgw-service/api/review/{id}?pageSize={size}&page={page}"
 
     # async def get_pagination_of_products_from_link(
     #     self, session: aiohttp.ClientSession, link
@@ -163,14 +185,41 @@ class TrendyolScraper:
 
     #         return pagination + 1
 
-    # async def get_products_reviews(self, link):
-    #     "/polo-state/erkek-cok-renkli-regular-bisiklet-yaka-5-li-tisort-paketi-saks-p-115621006/yorumlar"
+    async def get_products_reviews(self, session, id, get_all=True):
+        async with session.get(
+            self.get_product_reviews_api(
+                id,
+                0,
+            ),
+            headers=headers,
+        ) as response:
+            data = ujson.loads(await response.text())
 
-    #     async with session.get(
-    #         self.get_reccomendations_api(id, "/cross"), headers=headers
-    #     ) as response:
-    #         try:
-    #             data = ujson.loads(await response.text())
+            product_reviews = data["result"]["productReviews"]
+
+            total = product_reviews["totalElements"]
+
+        async with session.get(
+            self.get_product_reviews_api(id, 0, total), headers=headers
+        ) as response:
+            try:
+                data = ujson.loads(await response.text())
+
+                product_reviews = data["result"]["productReviews"]
+
+                reviews = product_reviews["content"]
+
+                return [
+                    {
+                        "user": review["userFullName"],
+                        "rate": review["rate"],
+                        "comment": review["comment"],
+                        "date": review["lastModifiedDate"],
+                    }
+                    for review in reviews
+                ]
+            except:
+                return []
 
     # async def get_product_questions(self, link):
     #     "/polo-state/erkek-cok-renkli-regular-bisiklet-yaka-5-li-tisort-paketi-saks-p-115621006/saticiya-sor?merchantId=342783"
@@ -238,6 +287,7 @@ class TrendyolScraper:
         self.count += 1
 
         async with session.get(self.get_product_api(id), headers=headers) as response:
+            # try:
             data = ujson.loads(await response.text())
 
             product = data["result"]
@@ -248,14 +298,14 @@ class TrendyolScraper:
             brand = product["brand"]
             sizes = product["allVariants"]
             description = product["contentDescriptions"]
-            
-            self.succesed += 1
 
-            return {
+            final = {
                 "id": product["id"],
                 "name": product["name"],
                 "link": product["url"],
-                "images": product["images"],
+                "images": [
+                    self.img_url + image_link for image_link in product["images"]
+                ],
                 "price": product["price"],
                 "rating": product["ratingScore"]["averageRating"],
                 "campaign": product["merchant"]["name"],
@@ -270,6 +320,9 @@ class TrendyolScraper:
                     "slug": category["beautifiedName"],
                 },
                 "showColor": product["color"],  # REVIEW
+                # "showColor": DictionaryUtils.get_dict_by_key_value(
+                #     colors, "name", product["color"]
+                # ),
                 "showSize": product["variants"][0]["attributeValue"],  # REVIEW
                 "sizes": [
                     {
@@ -286,35 +339,48 @@ class TrendyolScraper:
                         for description in product["contentDescriptions"]
                     ]
                 ),
-                "reviews": [],
-                "questions": [],
+                "reviews": await self.get_products_reviews(session, id),
+                # "questions": [],
                 "recommendations": await self.get_recommendation_products_id(
                     session, id
                 ),
                 "cross": await self.get_cross_products_id(session, id),
             }
 
-    async def get_product_from_raw_data(self, session, raw_product: dict):
-        attributes = await self.get_product_attributes(session, raw_product)
+            self.succesed += 1
+            # print(f"Processed: {id}\n")
 
-        product = await self.get_product_from_id(session, raw_product["id"])
+            return final
+
+            # except Exception as e:
+            #     self.failed += 1
+            #     print(e)
+            #     print(f"Error: {id}\n")
+
+    async def get_product_from_card_data(self, session, card_data: dict):
+        attributes = await self.get_product_attributes(session, card_data)
+
+        product = await self.get_product_from_id(session, card_data["id"])
+
         # Make async
-        if attributes != []:
-            for attribute in attributes:
-                colors = [
-                    {
-                        "name": attribute["name"],
-                        "slug": attribute["slug"],
-                        "product": await self.get_product_from_id(  # STORE JUST ID`s
-                            session, attribute["id"]
-                        ),
-                    }
-                    for attribute in attributes
-                ]
-
-            product["colors"] = colors
+        product["colors"] = (
+            [
+                {
+                    "name": attribute["name"],
+                    "slug": attribute["slug"],
+                    "product": await self.get_product_from_id(  # STORE JUST ID`s
+                        session, attribute["id"]
+                    ),
+                }
+                for attribute in attributes
+            ]
+            if attributes != []
+            else []
+        )
 
         return product
+
+    # pages_processed = 0
 
     async def get_all_products_from_link(self, session, link, page):
         try:
@@ -322,21 +388,34 @@ class TrendyolScraper:
                 self.get_products_api(link, page),
                 headers=headers,
             ) as response:
-                
-                    data = ujson.loads(await response.text())
+                data = ujson.loads(await response.text())
 
-                    raw_products = data["result"]["products"]
+                raw_products = data["result"]["products"]
 
-                    self.all_products += [
-                        await self.get_product_from_raw_data(session, raw_product)
-                        for raw_product in raw_products
-                    ]
+                self.all_products += [
+                    await self.get_product_from_card_data(session, raw_product)
+                    for raw_product in raw_products
+                ]
 
-                    print(f"Link: {link}\nPage: {page + 1}\n")
+                print(f"Link: {link}\nPage: {page + 1}\n")
+
+        except aiohttp.ClientConnectionError:
+            # pass
+            print(f"FAILED Link: {link}\nPage: {page + 1}\n")
+
+        except asyncio.exceptions.TimeoutError:
+            pass
+            # asyncio.wait(15)
 
         except Exception as e:
-            print(e)
-            print(f"FAILED Link: {link}\nPage: {page + 1}\n")
+            MyUtils.create_folder("output")
+            MyUtils.create_folder("output/error")
+            MyUtils.create_file("output/error/trace_back.txt", str(e))
+            MyUtils.create_file("output/error/products.json", ujson.dumps(self.all_products))
+
+        # Review
+        # self.pages_processed += 1 
+        # MyUtils.progress(int(100 / self.total * self.pages_processed))
 
     async def fetch_all_products(self):
         # OPTIMIZE 1
@@ -362,17 +441,32 @@ class TrendyolScraper:
 
         self.all_products = []
         async with aiohttp.ClientSession() as session:
+            self.total = len(end_categories) * 208
+
             tasks = [
                 self.get_all_products_from_link(session, category["link"], page)
+                # for page in range(208 + 1)  # JUST FOR TEST
+                # for category in end_categories  # JUST FOR TEST
                 for page in range(208 + 1)  # JUST FOR TEST
-                for category in end_categories # JUST FOR TEST
+                for category in end_categories[:len(end_categories) // 2]  # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
 
     def get_all_products(self, write2file=False):
+        print("\nLooking for categories")
+
         if not path.exists("output/categories.json"):
+            print("Starting parsing categories")
+
             self.get_all_categories(write2file=True)
+
+            print("Finished parsing categories")
+        else:
+            print("Categories found")
+
+        print("\nStarting parsing products")
+        print("Processed: ")
 
         asyncio.run(self.fetch_all_products())
 
@@ -380,16 +474,19 @@ class TrendyolScraper:
             MyUtils.create_folder("output")
             MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
 
-        print(f"Count: {self.count}\nSuccesed: {self.succesed}\nFailed: {self.count - self.succesed}\n")
+        print(
+            f"Count: {self.count}\nSuccesed: {self.succesed}\nFailed: {self.failed}\n"
+        )
+        print("Finished parsing products")
 
         return self.all_products
 
     # GET AGGREGATIONS
-    # aggregations = []
-
     # async def get_aggregations(self, session, link):
     #     async with session.get(
-    #         "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/aggregations" + link, headers=headers
+    #         "https://public.trendyol.com/discovery-web-searchgw-service/v2/api/aggregations"
+    #         + link,
+    #         headers=headers,
     #     ) as response:
     #         self.aggregations = []
 
@@ -397,7 +494,10 @@ class TrendyolScraper:
 
     #         aggregations = data["result"]["aggregations"]
 
-    #         self.aggregations = aggregations
+    #         return aggregations
+
+    # async def get_items_from_aggregations_group(self, session, link, group):
+    #     pass
 
     # GET COLORS
     all_colors = []
@@ -539,8 +639,8 @@ class TrendyolScraper:
 
                 aggregations = data["result"]["aggregations"]
 
-                category_aggregation = DictionaryUtils.get_dict_by_key_value(
-                    aggregations, "group", "CATEGORY"
+                category_aggregation = next(
+                    item for item in aggregations if item["group"] == "CATEGORY"
                 )
                 categories = category_aggregation["values"]
 
@@ -604,15 +704,16 @@ class TrendyolScraper:
 
         return self.all_categories
 
-
-def main():
+async def main():
     scraper = TrendyolScraper()
 
     start_time = time()
 
     # scraper.get_all_categories(write2file=True)
-    scraper.get_all_products(write2file=True) 
+    # scraper.get_all_brands(write2file=True)
     # scraper.get_all_colors(write2file=True)
+    # scraper.get_all_sizes(write2file=True)
+    scraper.get_all_products(write2file=True)
 
     print(time() - start_time)
 
