@@ -110,6 +110,7 @@ headers = {
     "Accept": "application/json, text/plain, */*",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15",
     "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJTdGFuZGFyZFVzZXIiOiIwIiwidW5pcXVlX25hbWUiOiJ1c21hbi5vbXVyYWxpZXZAYWxhdG9vLmVkdS5rZyIsInN1YiI6InVzbWFuLm9tdXJhbGlldkBhbGF0b28uZWR1LmtnIiwicm9sZSI6InVzZXIiLCJhdHdydG1rIjoiZDMwZGMxZjYtZTRlZS0xMWVjLWJiODUtOGE1NTRiMmY1N2E3IiwidXNlcklkIjoiOTM2ODAxMDkiLCJlbWFpbCI6InVzbWFuLm9tdXJhbGlldkBhbGF0b28uZWR1LmtnIiwiYXVkIjoic2JBeXpZdFgramhlTDRpZlZXeTV0eU1PTFBKV0Jya2EiLCJleHAiOjE4MTIyMzU0OTMsImlzcyI6ImF1dGgudHJlbmR5b2wuY29tIiwibmJmIjoxNjU0NDQ3NDkzfQ.SDyHGGU41lvYWqg6w95MvEIqvs-L_R7woBaKB41Q4F0",
 }
 
 
@@ -142,9 +143,6 @@ class TrendyolScraper:
 
     # GET PRODUCTS
     all_products = []
-    count = 0
-    succesed = 0
-    failed = 0
 
     def get_products_api(self, link, page=0):
         url = (
@@ -185,7 +183,7 @@ class TrendyolScraper:
 
     #         return pagination + 1
 
-    async def fetch_products_reviews(self, session, id, get_all=True):
+    async def fetch_len_of_products_reviews(self, session, id):
         async with session.get(
             self.get_product_reviews_api(
                 id,
@@ -193,14 +191,25 @@ class TrendyolScraper:
             ),
             headers=headers,
         ) as response:
-            data = ujson.loads(await response.text())
+            try:
+                data = ujson.loads(await response.text())
 
-            product_reviews = data["result"]["productReviews"]
+                product_reviews = data["result"]["productReviews"]
 
-            total = product_reviews["totalElements"]
+                total = product_reviews["totalElements"]
+
+                return total
+            except:
+                return 0
+
+    async def fetch_product_reviews(self, session, id, get_all=True):
+        size = await self.fetch_len_of_products_reviews(session, id)
+
+        if size == 0:
+            return []
 
         async with session.get(
-            self.get_product_reviews_api(id, 0, total), headers=headers
+            self.get_product_reviews_api(id, 0, size), headers=headers
         ) as response:
             try:
                 data = ujson.loads(await response.text())
@@ -284,88 +293,82 @@ class TrendyolScraper:
                 return []
 
     async def fetch_product_from_id(self, session, id):
-        self.count += 1
-
         async with session.get(self.get_product_api(id), headers=headers) as response:
-            # try:
-            data = ujson.loads(await response.text())
+            try:
+                data = ujson.loads(await response.text())
 
-            product = data["result"]
+                product = data["result"]
 
-            campaign = product["campaign"]
-            brand = product["brand"]
-            category = product["originalCategory"]
-            brand = product["brand"]
-            sizes = product["allVariants"]
-            description = product["contentDescriptions"]
+                campaign = product["campaign"]
+                brand = product["brand"]
+                category = product["originalCategory"]
+                brand = product["brand"]
+                sizes = product["allVariants"]
+                description = product["contentDescriptions"]
 
-            final = {
-                "id": product["id"],
-                "name": product["name"],
-                "link": product["url"],
-                "images": [
-                    self.img_url + image_link for image_link in product["images"]
-                ],
-                "price": product["price"],
-                "rating": product["ratingScore"]["averageRating"],
-                "campaign": product["merchant"]["name"],
-                "brand": {
-                    "id": brand["id"],
-                    "name": brand["name"],
-                    "slug": brand["beautifiedName"],
-                },
-                "category": {
-                    "id": category["id"],
-                    "name": category["name"],
-                    "slug": category["beautifiedName"],
-                },
-                "showColor": product["color"],  # REVIEW
-                # "showColor": DictionaryUtils.get_dict_by_key_value(
-                #     colors, "name", product["color"]
-                # ),
-                "showSize": product["variants"][0]["attributeValue"],  # REVIEW
-                "sizes": [
-                    {
-                        "value": size["value"],
-                        "inStock": size["inStock"],
-                        "price": size["price"],
-                        "currency": size["currency"],
-                    }
-                    for size in sizes
-                ],
-                "description": "\n".join(
-                    [
-                        description["description"]
-                        for description in product["contentDescriptions"]
-                    ]
-                ),
-                "reviews": await self.fetch_products_reviews(session, id),
-                # "questions": [],
-                "recommendations": await self.fetch_recommendation_products_id(
-                    session, id
-                ),
-                "cross": await self.fetch_cross_products_id(session, id),
-            }
+                final = {
+                    "id": product["id"],
+                    "name": product["name"],
+                    "link": product["url"],
+                    "images": [
+                        self.img_url + image_link for image_link in product["images"]
+                    ],
+                    "price": product["price"],
+                    "rating": product["ratingScore"]["averageRating"],
+                    "campaign": product["merchant"]["name"],
+                    "brand": {
+                        "id": brand["id"],
+                        "name": brand["name"],
+                        "slug": brand["beautifiedName"],
+                    },
+                    "category": {
+                        "id": category["id"],
+                        "name": category["name"],
+                        "slug": category["beautifiedName"],
+                    },
+                    "showColor": product["color"],  # REVIEW
+                    # "showColor": DictionaryUtils.get_dict_by_key_value(
+                    #     colors, "name", product["color"]
+                    # ),
+                    "showSize": product["variants"][0]["attributeValue"],  # REVIEW
+                    "sizes": [
+                        {
+                            "value": size["value"],
+                            "inStock": size["inStock"],
+                            "price": size["price"],
+                            "currency": size["currency"],
+                        }
+                        for size in sizes
+                    ],
+                    "description": "\n".join(
+                        [
+                            description["description"]
+                            for description in product["contentDescriptions"]
+                        ]
+                    ),
+                    # "reviews": await self.fetch_product_reviews(session, id),
+                    "questions": [],
+                    # "recommendations": await self.fetch_recommendation_products_id(
+                    #     session, id
+                    # ),
+                    # "cross": await self.fetch_cross_products_id(session, id),
+                }
 
-            self.succesed += 1
-            # print(f"Processed: {id}\n")
+                return final
 
-            return final
+            except Exception as e:
+                print(f"Error: {id}\n")
 
-            # except Exception as e:
-            #     self.failed += 1
-            #     print(e)
-            #     print(f"Error: {id}\n")
+        # except IndexError:
+        #     print(self.get_product_api(id))
 
     def get_product_from_id(self, id):
         async def task():
             global product
             async with aiohttp.ClientSession() as session:
                 product = await self.fetch_product_from_id(session, id)
-        try:
-            asyncio.run(task())
-        except Exception as e:
-            print(f"Error occurupted when getting '{id}' product")
+
+        asyncio.run(task())
 
         MyUtils.create_folder("output")
         MyUtils.create_folder("output/products")
@@ -374,64 +377,67 @@ class TrendyolScraper:
         return product
 
     async def fetch_product_from_card_data(self, session, card_data: dict):
-        attributes = await self.fetch_product_attributes(session, card_data)
+        try:
+            attributes = await self.fetch_product_attributes(session, card_data)
 
-        product = await self.fetch_product_from_id(session, card_data["id"])
+            product = await self.fetch_product_from_id(session, card_data["id"])
 
-        # Make async
-        product["colors"] = (
-            [
-                {
-                    "name": attribute["name"],
-                    "slug": attribute["slug"],
-                    "product": await self.fetch_product_from_id(  # STORE JUST ID`s
-                        session, attribute["id"]
-                    ),
-                }
-                for attribute in attributes
-            ]
-            if attributes != []
-            else []
-        )
+            # Make async
+            product["colors"] = (
+                [
+                    {
+                        "name": attribute["name"],
+                        "slug": attribute["slug"],
+                        "product": await self.fetch_product_from_id(  # STORE JUST ID`s
+                            session, attribute["id"]
+                        ),
+                    }
+                    for attribute in attributes
+                ]
+                if attributes != []
+                else []
+            )
 
-        return product
-
-    # pages_processed = 0
+            return product
+        except:
+            pass
 
     async def fetch_all_products_from_link(self, session, link, page):
         try:
             async with session.get(
                 self.get_products_api(link, page),
                 headers=headers,
+                timeout=20,
             ) as response:
                 data = ujson.loads(await response.text())
 
                 raw_products = data["result"]["products"]
 
-                self.all_products += [
-                    await self.fetch_product_from_card_data(session, raw_product)
-                    for raw_product in raw_products
-                ]
+                for raw_product in raw_products:
+                    self.all_products.append(await self.fetch_product_from_card_data(session, raw_product))
 
                 print(f"\nLink: {link}\nPage: {page + 1}")
 
-        except aiohttp.ClientConnectionError:
-            # pass
+        except asyncio.TimeoutError:
             print(f"\nFAILED Link: {link}\nPage: {page + 1}")
 
-        except asyncio.exceptions.TimeoutError:
-            pass
-            # asyncio.wait(15)
 
-        except Exception as e:
-            print(f"\nFAILED TO PROCESS Link: {link}\nPage: {page + 1}")
+        # except aiohttp.ClientConnectionError:
+        #     # pass
+        #     print(f"\nFAILED Link: {link}\nPage: {page + 1}")
 
-            MyUtils.create_folder("output")
-            MyUtils.create_folder("output/error")
-            MyUtils.create_file("output/error/trace_back.txt", str(e))
-            MyUtils.create_file(
-                "output/error/products.json", ujson.dumps(self.all_products)
-            )
+        # except aiohttp.client_exceptions.ClientPayloadError:
+        #     pass
+
+        # except Exception as e:
+        #     print(f"\nFAILED TO PROCESS Link: {link}\nPage: {page + 1}")
+
+        #     MyUtils.create_folder("output")
+        #     MyUtils.create_folder("output/error")
+        #     MyUtils.create_file("output/error/trace_back.txt", str(e))
+        #     MyUtils.create_file(
+        #         "output/error/products.json", ujson.dumps(self.all_products)
+        #     )
 
         # Review
         # self.pages_processed += 1
@@ -460,15 +466,18 @@ class TrendyolScraper:
         #
 
         self.all_products = []
-        async with aiohttp.ClientSession() as session:
+
+        connector = aiohttp.TCPConnector(limit=50)
+        async with aiohttp.ClientSession(connector=connector) as session:
+        # async with aiohttp.ClientSession() as session:
             self.total = len(end_categories) * 208
 
             tasks = [
                 self.fetch_all_products_from_link(session, category["link"], page)
                 # for page in range(208 + 1)  # JUST FOR TEST
                 # for category in end_categories  # JUST FOR TEST
-                for page in range(1)  # JUST FOR TEST
-                for category in end_categories[4:5]  # JUST FOR TEST
+                for page in range(208 + 1)  # JUST FOR TEST
+                for category in end_categories  # JUST FOR TEST
             ]
 
             await asyncio.gather(*tasks)
@@ -481,22 +490,21 @@ class TrendyolScraper:
 
             self.get_all_categories(write2file=True)
 
-            print("Finished parsing categories")
+            print("\nFinished parsing categories")
         else:
             print("Categories found")
 
         print("\nStarting parsing products")
         print("Processed: ")
 
-        asyncio.run(self.fetch_all_products())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.fetch_all_products())
+        loop.close()
 
         if write2file:
             MyUtils.create_folder("output")
             MyUtils.create_file("output/products.json", ujson.dumps(self.all_products))
 
-        print(
-            f"Count: {self.count}\nSuccesed: {self.succesed}\nFailed: {self.count - self.succesed}"  # {self.failed}\n"
-        )
         print("\nFinished parsing products")
 
         return self.all_products
@@ -667,7 +675,6 @@ class TrendyolScraper:
                 return categories
 
             except Exception as e:
-                # print(e)
                 pass
 
     async def get_categories(self, category, write2file=False):
@@ -732,11 +739,15 @@ def main():
     # scraper.get_all_brands(write2file=True)
     # scraper.get_all_colors(write2file=True)
     # scraper.get_all_sizes(write2file=True)
-    # scraper.get_all_products(write2file=True)
-    scraper.get_product_from_id(id=73352731)
+    print(len(scraper.get_all_products(write2file=True)))
+
+    # scraper.get_product_from_id(id=234437877)
 
     print(time() - start_time)
 
 
 if __name__ == "__main__":
     main()
+
+
+# 158237684
