@@ -357,7 +357,7 @@ class TrendyolScraper:
                 return final
 
             except Exception as e:
-                print(f"Error: {id}\n")
+                print(f"\nError: {id}\n")
 
         # except IndexError:
         #     print(self.get_product_api(id))
@@ -419,7 +419,7 @@ class TrendyolScraper:
                 print(f"\nLink: {link}\nPage: {page + 1}")
 
         except asyncio.TimeoutError:
-            print(f"\nFAILED Link: {link}\nPage: {page + 1}")
+            print(f"\nFAILED TO PROCESS Link: {link}\nPage: {page + 1}")
 
 
         # except aiohttp.ClientConnectionError:
@@ -429,15 +429,15 @@ class TrendyolScraper:
         # except aiohttp.client_exceptions.ClientPayloadError:
         #     pass
 
-        # except Exception as e:
-        #     print(f"\nFAILED TO PROCESS Link: {link}\nPage: {page + 1}")
+        except Exception as e:
+            print(f"\nFAILED Link: {link}\nPage: {page + 1}")
 
-        #     MyUtils.create_folder("output")
-        #     MyUtils.create_folder("output/error")
-        #     MyUtils.create_file("output/error/trace_back.txt", str(e))
-        #     MyUtils.create_file(
-        #         "output/error/products.json", ujson.dumps(self.all_products)
-        #     )
+            # MyUtils.create_folder("output")
+            # MyUtils.create_folder("output/error")
+            # MyUtils.create_file("output/error/trace_back.txt", str(e))
+            # MyUtils.create_file(
+            #     "output/error/products.json", ujson.dumps(self.all_products)
+            # )
 
         # Review
         # self.pages_processed += 1
@@ -499,7 +499,6 @@ class TrendyolScraper:
 
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.fetch_all_products())
-        loop.close()
 
         if write2file:
             MyUtils.create_folder("output")
@@ -739,15 +738,24 @@ def main():
     # scraper.get_all_brands(write2file=True)
     # scraper.get_all_colors(write2file=True)
     # scraper.get_all_sizes(write2file=True)
-    print(len(scraper.get_all_products(write2file=True)))
+    all_products = scraper.get_all_products(write2file=True)
 
-    # scraper.get_product_from_id(id=234437877)
+    print(len(all_products))
 
+    MyUtils.create_file(f"output/products/{all_products[0]['id']}", ujson.dumps(all_products[0]))
+
+    scraper.get_product_from_id(id=234437877)
+    scraper.get_product_from_id(id=79380050)
+    
     print(time() - start_time)
 
 
 if __name__ == "__main__":
     main()
 
-
+# 94090148
+# 234437877
+# 44060293
 # 158237684
+# /kadin-bustiyer-x-g1-c74
+# kadin-tesettur-salopet-x-g1-c105835
