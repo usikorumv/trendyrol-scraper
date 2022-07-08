@@ -225,7 +225,7 @@ class TrendyolScraper:
                         "comment": review["comment"],
                         "date": review["lastModifiedDate"],
                     }
-                    for review in reviews
+                    for review in reviews[:20]
                 ]
             except:
                 return []
@@ -347,11 +347,12 @@ class TrendyolScraper:
                         ]
                     ),
                     # "reviews": await self.fetch_product_reviews(session, id),
+                    "reviews": [],
                     "questions": [],
-                    # "recommendations": await self.fetch_recommendation_products_id(
-                    #     session, id
-                    # ),
-                    # "cross": await self.fetch_cross_products_id(session, id),
+                    "recommendations": await self.fetch_recommendation_products_id(
+                        session, id
+                    ),
+                    "cross": await self.fetch_cross_products_id(session, id),
                 }
 
                 return final
@@ -497,8 +498,10 @@ class TrendyolScraper:
         print("\nStarting parsing products")
         print("Processed: ")
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.fetch_all_products())
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(self.fetch_all_products())
+        
+        asyncio.run(self.fetch_all_products())
 
         if write2file:
             MyUtils.create_folder("output")
@@ -734,18 +737,8 @@ def main():
 
     start_time = time()
 
-    # scraper.get_all_categories(write2file=True)
-    # scraper.get_all_brands(write2file=True)
-    # scraper.get_all_colors(write2file=True)
-    # scraper.get_all_sizes(write2file=True)
     all_products = scraper.get_all_products(write2file=True)
-
     print(len(all_products))
-
-    MyUtils.create_file(f"output/products/{all_products[0]['id']}", ujson.dumps(all_products[0]))
-
-    scraper.get_product_from_id(id=234437877)
-    scraper.get_product_from_id(id=79380050)
     
     print(time() - start_time)
 
@@ -753,9 +746,11 @@ def main():
 if __name__ == "__main__":
     main()
 
-# 94090148
+# TODO: Solve errors
+# 42631817
 # 234437877
 # 44060293
 # 158237684
 # /kadin-bustiyer-x-g1-c74
-# kadin-tesettur-salopet-x-g1-c105835
+# /kadin-tesettur-salopet-x-g1-c105835
+# /erkek-buyuk-beden-sort-x-g2-c108870
